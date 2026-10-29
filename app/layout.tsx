@@ -1,0 +1,1 @@
+import type { Metadata } from "next";export const metadata:Metadata={title:"RIPEES Technologies Limited",description:"Technology built around your business."};export default function Layout({children}:{children:React.ReactNode}){return <html lang="en"><body>{children}</body></html>}

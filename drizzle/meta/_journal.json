@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1793172428629,
+      "tag": "0000_orange_ben_urich",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1793217241486,
+      "tag": "0001_moaning_cardiac",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793220290636,
+      "tag": "0002_military_bastion",
+      "breakpoints": true
+    }
+  ]
+}
