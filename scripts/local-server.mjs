@@ -9,6 +9,7 @@ import {createRequire} from "node:module";
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
 process.chdir(root);
+if(fs.existsSync(path.join(root,".env.local")))process.loadEnvFile(path.join(root,".env.local"));
 let dependencyRoot=root;try{const saved=JSON.parse(fs.readFileSync(path.join(root,".local","dependencies.json"),"utf8"));if(typeof saved.root==="string"&&fs.existsSync(path.join(saved.root,"node_modules","esbuild")))dependencyRoot=saved.root;}catch{}
 const dependencyRequire=createRequire(path.join(dependencyRoot,"package.json"));
 const {build}=dependencyRequire("esbuild");
@@ -38,7 +39,7 @@ const database={prepare(sql){let values=[];return {
 }},async batch(statements){sqlite.exec("BEGIN");try{const results=[];for(const statement of statements)results.push(await statement.run());sqlite.exec("COMMIT");return results}catch(error){sqlite.exec("ROLLBACK");throw error}}};
 const context=new AsyncLocalStorage();
 globalThis.__ripeesLocalContext=context;
-globalThis.__ripeesLocalEnv={DB:database,RIPEES_ADMIN_EMAIL:"owner@ripees.local"};
+globalThis.__ripeesLocalEnv={DB:database,RIPEES_ADMIN_EMAIL:"owner@ripees.local",OPENAI_API_KEY:process.env.OPENAI_API_KEY,OPENAI_CHAT_MODEL:process.env.OPENAI_CHAT_MODEL,CHAT_AI_DAILY_LIMIT:process.env.CHAT_AI_DAILY_LIMIT};
 const sessionToken=crypto.randomBytes(32).toString("hex");
 const cookieName="ripees_local_owner";
 const plugins=[{name:"ripees-local-bindings",setup(b){
@@ -50,17 +51,17 @@ const plugins=[{name:"ripees-local-bindings",setup(b){
  b.onLoad({filter:/.*/,namespace:"raw"},args=>({contents:fs.readFileSync(args.path,"utf8"),loader:"text"}));
 }}];
 console.log("Preparing RIPEES website, CRM and chatbot…");
-await build({stdin:{contents:'export * as admin from "./app/api/admin/route.ts";export * as enquiries from "./app/api/enquiries/route.ts";export * as website from "./app/website/route.ts";export * as chat from "./app/api/chat/route.ts";export * as leads from "./app/api/leads/route.ts";export * as backup from "./app/api/backup/route.ts";',resolveDir:root},bundle:true,nodePaths,platform:"node",format:"esm",outfile:path.join(runtimeDir,"server.mjs"),plugins,logLevel:"warning"});
+await build({stdin:{contents:'export * as admin from "./app/api/admin/route.ts";export * as enquiries from "./app/api/enquiries/route.ts";export * as website from "./app/website/route.ts";export * as chat from "./app/api/chat/route.ts";export * as leads from "./app/api/leads/route.ts";export * as backup from "./app/api/backup/route.ts";export * as feedback from "./app/api/chat-feedback/route.ts";export * as insights from "./app/api/chat-insights/route.ts";',resolveDir:root},bundle:true,nodePaths,platform:"node",format:"esm",outfile:path.join(runtimeDir,"server.mjs"),plugins,logLevel:"warning"});
 await build({stdin:{contents:'import {createRoot} from "react-dom/client";import Workspace from "./app/admin/workspace";createRoot(document.getElementById("root")).render(<Workspace/>);',resolveDir:root,loader:"tsx"},bundle:true,nodePaths,platform:"browser",format:"esm",jsx:"automatic",define:{"process.env.NODE_ENV":JSON.stringify("development")},outfile:path.join(runtimeDir,"admin.js"),logLevel:"warning"});
 const routes=await import(pathToFileURL(path.join(runtimeDir,"server.mjs")).href);
 const contentType={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=utf-8",".css":"text/css; charset=utf-8",".png":"image/png",".svg":"image/svg+xml",".jpg":"image/jpeg",".jpeg":"image/jpeg",".webp":"image/webp",".ico":"image/x-icon"};
 const layout=(title,body)=>'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+title+'</title></head><body>'+body+"</body></html>";
 const localBadge='<div style="position:fixed;left:10px;bottom:10px;z-index:40;background:#edf3df;border:1px solid #cedbb9;border-radius:20px;padding:6px 12px;font:10px sans-serif;color:#35512d">Local test · saved on this computer · <a href="/admin" style="color:inherit">Owner workspace ↗</a></div>';
-const signinPage=layout("RIPEES — local owner sign-in",'<main style="font:15px/1.7 system-ui,sans-serif;max-width:500px;margin:12vh auto;padding:32px;color:#20382c"><img src="/assets/ripees-logo.png" alt="RIPEES" style="width:100%;max-width:380px"><h1>Test your owner workspace.</h1><p>This local sign-in simulates the site owner on your computer. Products, website content, enquiries and chatbot settings are saved in a local database.</p><form method="post" action="/local-signin"><button style="padding:15px 22px;border:0;background:#20382c;color:#d3f36a;border-radius:7px;font:inherit;cursor:pointer">Enter local owner workspace ↗</button></form><p><a href="/website" style="color:#537932">View the website instead</a></p><p style="font-size:12px;color:#7c8870">The AI connection is not configured in this local test. Approved-answer mode is available.</p></main>');
+const signinPage=layout("RIPEES — local owner sign-in",'<main style="font:15px/1.7 system-ui,sans-serif;max-width:500px;margin:12vh auto;padding:32px;color:#20382c"><img src="/assets/ripees-logo.png" alt="RIPEES" style="width:100%;max-width:380px"><h1>Test your owner workspace.</h1><p>This local sign-in simulates the site owner on your computer. Products, website content, enquiries and chatbot settings are saved in a local database.</p><form method="post" action="/local-signin"><button style="padding:15px 22px;border:0;background:#20382c;color:#d3f36a;border-radius:7px;font:inherit;cursor:pointer">Enter local owner workspace ↗</button></form><p><a href="/website" style="color:#537932">View the website instead</a></p><p style="font-size:12px;color:#7c8870">Approved-answer mode is available. The owner can enable AI mode when a provider is configured.</p></main>');
 const adminPage=layout("RIPEES — local owner workspace",'<link rel="stylesheet" href="/local-assets/admin.css"><div id="root"></div><script type="module" src="/local-assets/admin.js"></script>');
 const isOwner=req=>String(req.headers.cookie||"").split(";").some(c=>c.trim()===cookieName+"="+sessionToken);
 const trustedOrigin=req=>!req.headers.origin||[origin,"http://localhost:"+port].includes(req.headers.origin);
-async function sendWebResponse(response,res){res.statusCode=response.status;for(const[k,v]of response.headers)res.setHeader(k,v);res.setHeader("Cache-Control","no-store");res.end(Buffer.from(await response.arrayBuffer()));}
+async function sendWebResponse(response,res){res.statusCode=response.status;for(const[k,v]of response.headers)res.setHeader(k,v);res.setHeader("Cache-Control","no-store");if(response.headers.get("content-type")?.includes("text/event-stream")){res.flushHeaders();const reader=response.body.getReader();res.on("close",()=>reader.cancel().catch(()=>{}));try{while(!res.destroyed){const {value,done}=await reader.read();if(done)break;res.write(Buffer.from(value));}}finally{reader.releaseLock();res.end();}}else res.end(Buffer.from(await response.arrayBuffer()));}
 function send(res,status,body,type="text/html; charset=utf-8"){res.writeHead(status,{"Content-Type":type,"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"});res.end(body)}
 async function staticFile(base,relative,res){let decoded;try{decoded=decodeURIComponent(relative)}catch{return send(res,400,"Bad path.","text/plain")};const target=path.resolve(base,decoded);if(!target.startsWith(base+path.sep))return send(res,403,"Forbidden.","text/plain");try{if(!fs.statSync(target).isFile())return send(res,404,"Not found.","text/plain");send(res,200,fs.readFileSync(target),contentType[path.extname(target)]||"application/octet-stream");}catch{send(res,404,"Not found.","text/plain")}}
 const server=http.createServer(async(req,res)=>{
@@ -89,6 +90,8 @@ const server=http.createServer(async(req,res)=>{
    let response;
    if(url.pathname==="/website"&&method==="GET"){response=await routes.website.GET(request);if(response.ok){const body=(await response.text()).replace("</body>",localBadge+"</body>");response=new Response(body,{headers:response.headers});}}
    else if(url.pathname==="/api/admin"){response=method==="GET"?await routes.admin.GET():method==="POST"?await routes.admin.POST(request):new Response("Method not allowed",{status:405});if(method==="GET"&&response.ok){const data=await response.json();response=Response.json({...data,storageMode:"local"},{headers:response.headers});}}
+   else if(url.pathname==="/api/chat-feedback"&&method==="POST")response=await routes.feedback.POST(request);
+   else if(url.pathname==="/api/chat-insights"&&method==="GET")response=await routes.insights.GET();
    else if(url.pathname==="/api/backup"&&method==="GET")response=await routes.backup.GET();
    else if(url.pathname==="/api/leads"&&method==="GET")response=await routes.leads.GET(request);
    else if(url.pathname==="/api/enquiries"&&method==="POST")response=await routes.enquiries.POST(request);
@@ -99,7 +102,7 @@ const server=http.createServer(async(req,res)=>{
  }catch(error){console.error("Local request failed:",error instanceof Error?error.message:"unknown");if(!res.headersSent)send(res,500,"The local request could not be completed.","text/plain");else res.end();}
 });
 server.on("error",error=>{console.error("Could not start local server:",error.message);process.exitCode=1;});
-server.listen(port,"127.0.0.1",()=>{console.log("\nRIPEES is running locally.\nWebsite: "+origin+"/website\nOwner workspace: "+origin+"/admin\nData: "+path.join(dataDir,"ripees.sqlite")+"\nChatbot: approved-answer mode (no external AI connection).\nPress Ctrl+C to stop.\n");});
+server.listen(port,"127.0.0.1",()=>{console.log("\nRIPEES is running locally.\nWebsite: "+origin+"/website\nOwner workspace: "+origin+"/admin\nData: "+path.join(dataDir,"ripees.sqlite")+"\nChatbot: approved answers with optional AI assistance (owner setting).\nPress Ctrl+C to stop.\n");});
 function shutdown(){server.close(()=>{sqlite.close();process.exit(0)});}
 process.on("SIGINT",shutdown);process.on("SIGTERM",shutdown);
 
