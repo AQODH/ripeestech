@@ -1,0 +1,2 @@
+export type ProductRecord={id:string;name:string;summary:string;description:string;category:string;status:'draft'|'coming_soon'|'available';price:string;features:string;url:string;image:string;sort_order:number;created_at:string;updated_at:string};
+export type LeadRecord={id:string;name:string;email:string;phone:string;company:string;interest:string;message:string;status:string;notes:string;created_at:string;updated_at:string};

@@ -3,6 +3,10 @@ import { runWithConnectorBinding } from "../lib/connector-context";
 import type { ConnectorBinding } from "../lib/connector-contract.mjs";
 
 const worker = {
+  async scheduled(_event: unknown, env: Cloudflare.Env) {
+    if(!env.DB)throw new Error('Scheduled retention requires DB');
+    await env.DB.prepare('DELETE FROM chat_events WHERE created_at < ?').bind(new Date(Date.now()-30*86400000).toISOString()).run();
+  },
   fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
     let binding = ctx.props?.CONNECTORS;
     // Local preview emulates the same request-scoped capability. This branch and

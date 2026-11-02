@@ -29,6 +29,13 @@
       "when": 1793475109582,
       "tag": "0003_sharp_liz_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793653200000,
+      "tag": "0004_company_contacts",
+      "breakpoints": true
     }
   ]
 }

@@ -61,6 +61,7 @@ export default defineConfig(async ({ command }) => {
         inspectorPort: false,
         config: {
           ...localBindingConfig,
+          triggers: { crons: ["17 2 * * *"] },
           ...(command === "serve"
             ? {
                 services: [

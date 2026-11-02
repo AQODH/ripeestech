@@ -39,7 +39,7 @@ const database={prepare(sql){let values=[];return {
 }},async batch(statements){sqlite.exec("BEGIN");try{const results=[];for(const statement of statements)results.push(await statement.run());sqlite.exec("COMMIT");return results}catch(error){sqlite.exec("ROLLBACK");throw error}}};
 const context=new AsyncLocalStorage();
 globalThis.__ripeesLocalContext=context;
-globalThis.__ripeesLocalEnv={DB:database,RIPEES_ADMIN_EMAIL:"owner@ripees.local",OPENAI_API_KEY:process.env.OPENAI_API_KEY,OPENAI_CHAT_MODEL:process.env.OPENAI_CHAT_MODEL,CHAT_AI_DAILY_LIMIT:process.env.CHAT_AI_DAILY_LIMIT};
+globalThis.__ripeesLocalEnv={DB:database,RIPEES_TRUST_IDENTITY_HEADERS:"true",RIPEES_ADMIN_EMAIL:"owner@ripees.local",OPENAI_API_KEY:process.env.OPENAI_API_KEY,OPENAI_CHAT_MODEL:process.env.OPENAI_CHAT_MODEL,CHAT_AI_DAILY_LIMIT:process.env.CHAT_AI_DAILY_LIMIT};
 const sessionToken=crypto.randomBytes(32).toString("hex");
 const cookieName="ripees_local_owner";
 const plugins=[{name:"ripees-local-bindings",setup(b){
@@ -51,7 +51,7 @@ const plugins=[{name:"ripees-local-bindings",setup(b){
  b.onLoad({filter:/.*/,namespace:"raw"},args=>({contents:fs.readFileSync(args.path,"utf8"),loader:"text"}));
 }}];
 console.log("Preparing RIPEES website, CRM and chatbot…");
-await build({stdin:{contents:'export * as admin from "./app/api/admin/route.ts";export * as enquiries from "./app/api/enquiries/route.ts";export * as website from "./app/website/route.ts";export * as chat from "./app/api/chat/route.ts";export * as leads from "./app/api/leads/route.ts";export * as backup from "./app/api/backup/route.ts";export * as feedback from "./app/api/chat-feedback/route.ts";export * as insights from "./app/api/chat-insights/route.ts";',resolveDir:root},bundle:true,nodePaths,platform:"node",format:"esm",outfile:path.join(runtimeDir,"server.mjs"),plugins,logLevel:"warning"});
+await build({stdin:{contents:'export * as admin from "./app/api/admin/route.ts";export * as enquiries from "./app/api/enquiries/route.ts";export * as website from "./app/website/route.ts";export * as chat from "./app/api/chat/route.ts";export * as leads from "./app/api/leads/route.ts";export * as backup from "./app/api/backup/route.ts";export * as feedback from "./app/api/chat-feedback/route.ts";export * as insights from "./app/api/chat-insights/route.ts";export * as terms from "./app/terms/route.ts";export * as privacy from "./app/privacy/route.ts";',resolveDir:root},bundle:true,nodePaths,platform:"node",format:"esm",outfile:path.join(runtimeDir,"server.mjs"),plugins,logLevel:"warning"});
 await build({stdin:{contents:'import {createRoot} from "react-dom/client";import Workspace from "./app/admin/workspace";createRoot(document.getElementById("root")).render(<Workspace/>);',resolveDir:root,loader:"tsx"},bundle:true,nodePaths,platform:"browser",format:"esm",jsx:"automatic",define:{"process.env.NODE_ENV":JSON.stringify("development")},outfile:path.join(runtimeDir,"admin.js"),logLevel:"warning"});
 const routes=await import(pathToFileURL(path.join(runtimeDir,"server.mjs")).href);
 const contentType={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=utf-8",".css":"text/css; charset=utf-8",".png":"image/png",".svg":"image/svg+xml",".jpg":"image/jpeg",".jpeg":"image/jpeg",".webp":"image/webp",".ico":"image/x-icon"};
@@ -88,6 +88,7 @@ const server=http.createServer(async(req,res)=>{
   const method=req.method||"GET";const request=new Request(url,{method,headers,...(["GET","HEAD"].includes(method)?{}:{body:Buffer.concat(chunks)})});
   await context.run({headers},async()=>{
    let response;
+   if((url.pathname==="/terms"||url.pathname==="/privacy")&&method==="GET")return sendWebResponse(routes[url.pathname.slice(1)].GET(),res);
    if(url.pathname==="/website"&&method==="GET"){response=await routes.website.GET(request);if(response.ok){const body=(await response.text()).replace("</body>",localBadge+"</body>");response=new Response(body,{headers:response.headers});}}
    else if(url.pathname==="/api/admin"){response=method==="GET"?await routes.admin.GET():method==="POST"?await routes.admin.POST(request):new Response("Method not allowed",{status:405});if(method==="GET"&&response.ok){const data=await response.json();response=Response.json({...data,storageMode:"local"},{headers:response.headers});}}
    else if(url.pathname==="/api/chat-feedback"&&method==="POST")response=await routes.feedback.POST(request);
