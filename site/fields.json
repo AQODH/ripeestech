@@ -4,28 +4,28 @@
     "key": "eyebrow",
     "label": "Hero eyebrow",
     "original": "● &nbsp; BUILT IN UGANDA. THINKING BEYOND BORDERS.",
-    "value": "●   BUILT IN UGANDA. THINKING BEYOND BORDERS."
+    "value": "TECHNOLOGY, WITH PURPOSE"
   },
   {
     "group": "hero",
     "key": "headline1",
     "label": "Headline, first line",
     "original": "Big possibilities.",
-    "value": "Big possibilities."
+    "value": "Your ambition."
   },
   {
     "group": "hero",
     "key": "headline2",
     "label": "Headline, second line",
     "original": "Built around ",
-    "value": "Built around "
+    "value": "Built into "
   },
   {
     "group": "hero",
     "key": "accent",
     "label": "Highlighted word",
     "original": "you.",
-    "value": "you."
+    "value": "software."
   },
   {
     "group": "hero",
@@ -39,14 +39,14 @@
     "key": "intro2",
     "label": "Intro, second line",
     "original": "We build ecommerce experiences and custom software, with a bigger vision for what comes next.",
-    "value": "We build ecommerce experiences and custom software, with a bigger vision for what comes next."
+    "value": "Ecommerce and custom software that connect your operations, simplify your work, and bring your ideas to life."
   },
   {
     "group": "hero",
     "key": "cta",
     "label": "Main button",
     "original": "Tell us what you’re building &nbsp; ↗",
-    "value": "Tell us what you’re building   ↗"
+    "value": "Let’s build ↗"
   },
   {
     "group": "demo",
