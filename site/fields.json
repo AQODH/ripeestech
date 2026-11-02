@@ -200,21 +200,21 @@
     "key": "about_intro",
     "label": "Company introduction",
     "original": "RIPEES Technologies Limited is a Ugandan technology company built for business. We turn ambitious ideas into practical ecommerce experiences and custom software, shaped around your goals and the way you work.",
-    "value": "RIPEES Technologies Limited is a Ugandan technology company built for business. We turn ambitious ideas into practical ecommerce experiences and custom software, shaped around your goals and the way you work."
+    "value": "RIPEES Technologies Limited builds ecommerce experiences and the software behind them. We design around the complete customer journey—from discovering a product to placing an order and managing fulfilment."
   },
   {
     "group": "about",
     "key": "vision",
     "label": "Company vision",
     "original": "Rooted in Uganda and driven by global ambition, we bring clarity, purpose and technical focus to every project. Our mission is to help businesses work smarter, serve customers better and build with confidence.",
-    "value": "Rooted in Uganda and driven by global ambition, we bring clarity, purpose and technical focus to every project. Our mission is to help businesses work smarter, serve customers better and build with confidence."
+    "value": "An online store is one part of the ecosystem. Our focus is connecting storefronts, payments, inventory and business workflows through clear design, custom software and purposeful integrations."
   },
   {
     "group": "about",
     "key": "values",
     "label": "Company values",
     "original": "Curiosity. Purpose. Progress. ↗",
-    "value": "Curiosity. Purpose. Progress. ↗"
+    "value": "Storefronts. Operations. Integrations. ↗"
   },
   {
     "group": "cta",
