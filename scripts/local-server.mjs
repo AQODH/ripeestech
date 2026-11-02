@@ -81,7 +81,7 @@ const server=http.createServer(async(req,res)=>{
    return send(res,200,adminPage);
   }
   if(url.pathname.startsWith("/local-assets/"))return staticFile(runtimeDir,url.pathname.slice("/local-assets/".length),res);
-  if(url.pathname.startsWith("/assets/")||["/style.css","/app.js","/chat.css","/chat.js","/favicon.svg"].includes(url.pathname))return staticFile(path.join(root,"public"),url.pathname.slice(1),res);
+  if(url.pathname.startsWith("/assets/")||["/style.css","/app.js","/chat.css","/chat.js","/favicon.svg","/motion.css","/motion.js","/theme-effects.js"].includes(url.pathname))return staticFile(path.join(root,"public"),url.pathname.slice(1),res);
   const headers=new Headers();for(const[k,v]of Object.entries(req.headers)){if(!k.startsWith("oai-authenticated-")&&v!==undefined)headers.set(k,Array.isArray(v)?v.join(","):v);}
   if(isOwner(req)){headers.set("oai-authenticated-user-id","local_ripees_owner");headers.set("oai-authenticated-user-email","owner@ripees.local");headers.set("oai-authenticated-user-full-name",encodeURIComponent("Local RIPEES owner"));headers.set("oai-authenticated-user-full-name-encoding","percent-encoded-utf-8");}
   let bytes=0;const chunks=[];for await(const chunk of req){bytes+=chunk.length;if(bytes>10100000)return send(res,413,"Request is too large.","text/plain");chunks.push(chunk);}
