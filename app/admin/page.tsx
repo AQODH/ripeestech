@@ -1,1 +1,10 @@
-import {owner} from "../../lib/crm-server";import {chatGPTSignInPath} from "../chatgpt-auth";import Admin from "./workspace";export const dynamic="force-dynamic";export default async function AdminPage(){const u=await owner();if(!u)return <main style={{fontFamily:"sans-serif",maxWidth:560,margin:"100px auto",padding:30}}><h1>RIPEES workspace</h1><p>This area is reserved for the site owner.</p><a href={chatGPTSignInPath("/admin")} target="_top">Sign in with your owner account →</a><p><a href="/">Return to website</a></p></main>;return <Admin/>}
+import { redirect } from "next/navigation";
+import { owner } from "../../lib/crm-server";
+import Admin from "./workspace";
+
+export const dynamic = "force-dynamic";
+
+export default async function AdminPage() {
+  if (!(await owner())) redirect("/admin/login");
+  return <Admin />;
+}

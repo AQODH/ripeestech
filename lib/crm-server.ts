@@ -1,9 +1,9 @@
 import { env } from "cloudflare:workers";
-import { getChatGPTUser } from "../app/chatgpt-auth";
+import { getAdminUser } from "./admin-auth";
 import { defaults } from "./content";
 export const noCache={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff","Referrer-Policy":"strict-origin-when-cross-origin"};
 export function db(){if(!env.DB)throw new Error("Database unavailable");return env.DB;}
-export async function owner(){const u=await getChatGPTUser();const allowed=(env as any).RIPEES_ADMIN_EMAIL;if(!u||!allowed||u.email.toLowerCase()!==allowed.toLowerCase())return null;return u;}
+export async function owner(){return getAdminUser();}
 export function mutationAllowed(req:Request){const origin=req.headers.get("origin");return (!origin||origin===new URL(req.url).origin)&&req.headers.get("sec-fetch-site")!=="cross-site";}
 export async function readContent(){const row=await db().prepare("SELECT value,revision FROM site_content WHERE id='website'").first<any>();return {settings:{...defaults,...(row?JSON.parse(row.value):{})},revision:row?.revision??0};}
 export async function readProducts(publicOnly=false){const result=await db().prepare("SELECT * FROM products"+(publicOnly?" WHERE status != 'draft'":"")+" ORDER BY sort_order ASC, created_at DESC").all();return result.results;}

@@ -3,9 +3,23 @@
 ## Open the running service
 
 - Website: http://127.0.0.1:4173/website
-- Owner workspace: http://127.0.0.1:4173/admin
+- Administrator sign-in: http://127.0.0.1:4173/admin/login
 
-On the local sign-in page, click **Enter local owner workspace**. This simulates the owner for local testing; it is separate from your hosted site's ChatGPT sign-in.
+The local owner-workspace mock has been replaced with administrator accounts and password sign-in. No email sender, Resend account, or other authentication API is required.
+
+1. Create a fresh secret of at least 32 characters. For example, run `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"` and keep the result private.
+2. In the project root, create the ignored `.env.local` file with your administrator emails and secret:
+
+       RIPEES_ADMIN_EMAILS=admin1@example.com,admin2@example.com
+       RIPEES_AUTH_PEPPER=paste-a-new-random-secret-here
+
+   Use real addresses you control. Never reuse the pepper previously shared in chat, and do not commit `.env.local`.
+3. Start the server with `npm run local`, then in another terminal run:
+
+       node scripts/provision-admin.mjs --local admin1@example.com
+
+4. Open the one-use setup link printed in the terminal and choose a password of at least 12 characters. Save the recovery codes somewhere private. Setup links expire after 30 minutes.
+5. To set up another allowlisted administrator, run the provisioning command for that address.
 
 ## Start it again
 
@@ -57,8 +71,8 @@ The local runner can load a securely configured key from ignored .env.local. AI 
 
 - The application passed 15 CRM checks, 19 readiness checks and 15 live local HTTP integration checks.
 - Chat requests are limited to 15 per visitor per minute and 500 total per day.
-- This is a loopback-only local test service, not an internet production login system.
-- Local owner sessions reset when the server restarts.
+- The local service binds to loopback. Administrator passwords are PBKDF2-hashed, and browser sessions expire after 12 hours.
+- Sign out using the **Sign out** button. Sessions are stored in the local database and survive service restarts until they expire or are revoked.
 - Font loading may use Google Fonts; system-font fallbacks work without it.
 - Email links open your email application. No automatic outgoing-email service is configured.
 - Use **Ctrl+C** in the server terminal to stop it.
@@ -73,7 +87,7 @@ The local runner can load a securely configured key from ignored .env.local. AI 
 - scripts/local-server.mjs — local server and file-backed database
 - tests/local-smoke.mjs — local HTTP integration checks
 
-The hosted application code remains available in this source tree. The local runner uses the same application handlers with a local database and local owner session.
+The hosted application code remains available in this source tree. The local runner uses the same password-authentication handlers with a file-backed local database. No authentication email is sent; operators share short-lived setup links privately.
 
 
 ## Reply pacing

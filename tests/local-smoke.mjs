@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
+import { createHash, randomBytes } from "node:crypto";
+import { DatabaseSync } from "node:sqlite";
+import fs from "node:fs";
 const base="http://127.0.0.1:"+(process.env.PORT||4173);
 let count=0,cookie="",sequence=0;
+if(fs.existsSync(".env.local"))process.loadEnvFile(".env.local");if(fs.existsSync(".dev.vars"))process.loadEnvFile(".dev.vars");
+const allowedEmail=(process.env.RIPEES_ADMIN_EMAILS||"").split(",").map(value=>value.trim().toLowerCase()).find(Boolean);
+if(!allowedEmail)throw new Error("Configure RIPEES_ADMIN_EMAILS in .env.local before running the local smoke test.");
+const sqlite=new DatabaseSync(".local/ripees.sqlite");sqlite.exec("PRAGMA busy_timeout=5000");
+const account=sqlite.prepare("SELECT id FROM admin_users WHERE email=?").get(allowedEmail);
+if(!account){sqlite.close();throw new Error("Provision an administrator before running the local smoke test.");}
+const testToken=randomBytes(32).toString("hex");
+sqlite.prepare("INSERT INTO admin_sessions (token_hash,user_id,created_at,expires_at) VALUES (?,?,?,?)").run(createHash("sha256").update(testToken).digest("hex"),account.id,new Date().toISOString(),Date.now()+3600000);
 const pass=name=>{count++;console.log("PASS "+name)};
 async function request(url,options={}){const response=await fetch(base+url,{...options,headers:{...(cookie?{cookie}:{}),...options.headers}});const text=await response.text();let data;try{data=JSON.parse(text)}catch{data=text};return {response,data};}
 async function admin(payload){return request("/api/admin",{method:"POST",headers:{"content-type":"application/json","x-ripees-admin":"1",origin:base},body:JSON.stringify(payload)});}
@@ -11,7 +22,8 @@ let original;
 try{
  let r=await request("/website");assert.equal(r.response.status,200);assert.ok(r.data.includes('/chat.js'));pass("Website and chatbot assets served");
  r=await request("/api/admin");assert.equal(r.response.status,403);pass("Owner data protected before local sign-in");
- const login=await fetch(base+"/local-signin",{method:"POST",headers:{origin:base},redirect:"manual"});assert.equal(login.status,303);cookie=login.headers.get("set-cookie").split(";")[0];original=await state();assert.ok(original.ownerName.includes("Local"));pass("Local owner sign-in works");
+ r=await request("/admin/login");assert.equal(r.response.status,200);assert.ok(r.data.includes("admin-login.js"));pass("Password sign-in page is served");
+ cookie="ripees_admin_session="+testToken;original=await state();assert.ok(original.ownerName.includes(allowedEmail));pass("Database-backed administrator session works");
  r=await request("/api/chat");assert.equal(r.data.mode,"knowledge");assert.equal(r.data.enabled,true);pass("Chat reports its actual knowledge mode");
  r=await chat("Compare SaaS and custom software");assert.equal(r.response.status,200,JSON.stringify(r.data));assert.ok(r.data.answer.includes("| Factor | SaaS | Custom software |"));pass("Formatted technology comparison returned");
  const stamp=Date.now().toString(36);
@@ -33,5 +45,5 @@ try{
  console.log(count+" live local integration checks passed.");
 }finally{
  if(cookie&&original){for(const id of createdProducts)await admin({action:"deleteProduct",id});for(const id of createdLeads)await admin({action:"deleteLead",id});const current=await state();await admin({action:"content",settings:original.settings,revision:current.revision});console.log("Temporary local test records removed; original settings restored.");}
+ sqlite.prepare("DELETE FROM admin_sessions WHERE token_hash=?").run(createHash("sha256").update(testToken).digest("hex"));sqlite.close();
 }
-
