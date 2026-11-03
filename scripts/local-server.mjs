@@ -39,7 +39,7 @@ const database={prepare(sql){let values=[];return {
 }},async batch(statements){sqlite.exec("BEGIN");try{const results=[];for(const statement of statements)results.push(await statement.run());sqlite.exec("COMMIT");return results}catch(error){sqlite.exec("ROLLBACK");throw error}}};
 const context=new AsyncLocalStorage();
 globalThis.__ripeesLocalContext=context;
-globalThis.__ripeesLocalEnv={DB:database,RIPEES_TRUST_IDENTITY_HEADERS:"true",RIPEES_ADMIN_EMAIL:"owner@ripees.local",OPENAI_API_KEY:process.env.OPENAI_API_KEY,OPENAI_CHAT_MODEL:process.env.OPENAI_CHAT_MODEL,CHAT_AI_DAILY_LIMIT:process.env.CHAT_AI_DAILY_LIMIT};
+globalThis.__ripeesLocalEnv={DB:database,RIPEES_LOCAL_AUTH:()=>true,RIPEES_TRUST_IDENTITY_HEADERS:"true",RIPEES_ADMIN_EMAIL:"owner@ripees.local",RIPEES_ENABLE_AI:process.env.RIPEES_ENABLE_AI,OPENAI_API_KEY:process.env.OPENAI_API_KEY,OPENAI_CHAT_MODEL:process.env.OPENAI_CHAT_MODEL,CHAT_AI_DAILY_LIMIT:process.env.CHAT_AI_DAILY_LIMIT};
 const sessionToken=crypto.randomBytes(32).toString("hex");
 const cookieName="ripees_local_owner";
 const plugins=[{name:"ripees-local-bindings",setup(b){

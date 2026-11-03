@@ -1,3 +1,4 @@
+import { verifyAccessOwner, withAccessOwner } from "../lib/access-owner";
 import handler from "vinext/server/fetch-handler";
 import { runWithConnectorBinding } from "../lib/connector-context";
 import type { ConnectorBinding } from "../lib/connector-contract.mjs";
@@ -7,7 +8,25 @@ const worker = {
     if(!env.DB)throw new Error('Scheduled retention requires DB');
     await env.DB.prepare('DELETE FROM chat_events WHERE created_at < ?').bind(new Date(Date.now()-30*86400000).toISOString()).run();
   },
-  fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
+  async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
+    const url = new URL(request.url);
+    let decodedPath: string;
+    try { decodedPath = decodeURIComponent(url.pathname); }
+    catch { return new Response("Invalid URL.", { status: 400 }); }
+    const path = decodedPath.replace(/\/+/g, "/").replace(/\/+$/, "");
+    const privateRoute = /^\/(?:admin(?:\/|$)|api\/(?:admin|leads|backup|chat-insights)(?:\/|$))/i.test(path);
+    const privateHeaders = {
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+    };
+    if (privateRoute && (!env.RIPEES_ADMIN_HOST || url.hostname !== env.RIPEES_ADMIN_HOST)) {
+      return new Response("Owner workspace unavailable on this host.", { status: 403, headers: privateHeaders });
+    }
+    const owner = privateRoute ? await verifyAccessOwner(request.headers.get("cf-access-jwt-assertion"), env) : null;
+    if (privateRoute && !owner) {
+      return new Response("Owner sign-in is required.", { status: 403, headers: privateHeaders });
+    }
     let binding = ctx.props?.CONNECTORS;
     // Local preview emulates the same request-scoped capability. This branch and
     // the auxiliary service binding are absent from production builds.
@@ -27,7 +46,12 @@ const worker = {
         },
       };
     }
-    return runWithConnectorBinding(binding, () => handler.fetch(request, env, ctx));
+    const handle = () => runWithConnectorBinding(binding, () => handler.fetch(request, env, ctx));
+    const response = await (owner ? withAccessOwner(owner, handle) : handle());
+    if (!privateRoute) return response;
+    const secured = new Response(response.body, response);
+    for (const [name, value] of Object.entries(privateHeaders)) secured.headers.set(name, value);
+    return secured;
   },
 };
 
