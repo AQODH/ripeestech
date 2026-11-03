@@ -39,7 +39,7 @@ const database={prepare(sql){let values=[];return {
 }},async batch(statements){sqlite.exec("BEGIN");try{const results=[];for(const statement of statements)results.push(await statement.run());sqlite.exec("COMMIT");return results}catch(error){sqlite.exec("ROLLBACK");throw error}}};
 const context=new AsyncLocalStorage();
 globalThis.__ripeesLocalContext=context;
-globalThis.__ripeesLocalEnv={DB:database,RIPEES_TRUST_IDENTITY_HEADERS:"true",RIPEES_ADMIN_EMAIL:"owner@ripees.local",OPENAI_API_KEY:process.env.OPENAI_API_KEY,OPENAI_CHAT_MODEL:process.env.OPENAI_CHAT_MODEL,CHAT_AI_DAILY_LIMIT:process.env.CHAT_AI_DAILY_LIMIT};
+globalThis.__ripeesLocalEnv={DB:database,RIPEES_LOCAL_AUTH:()=>true,RIPEES_TRUST_IDENTITY_HEADERS:"true",RIPEES_ADMIN_EMAIL:"owner@ripees.local",RIPEES_ENABLE_AI:process.env.RIPEES_ENABLE_AI,OPENAI_API_KEY:process.env.OPENAI_API_KEY,OPENAI_CHAT_MODEL:process.env.OPENAI_CHAT_MODEL,CHAT_AI_DAILY_LIMIT:process.env.CHAT_AI_DAILY_LIMIT};
 const sessionToken=crypto.randomBytes(32).toString("hex");
 const cookieName="ripees_local_owner";
 const plugins=[{name:"ripees-local-bindings",setup(b){
@@ -55,7 +55,7 @@ await build({stdin:{contents:'export * as admin from "./app/api/admin/route.ts";
 await build({stdin:{contents:'import {createRoot} from "react-dom/client";import Workspace from "./app/admin/workspace";createRoot(document.getElementById("root")).render(<Workspace/>);',resolveDir:root,loader:"tsx"},bundle:true,nodePaths,platform:"browser",format:"esm",jsx:"automatic",define:{"process.env.NODE_ENV":JSON.stringify("development")},outfile:path.join(runtimeDir,"admin.js"),logLevel:"warning"});
 const routes=await import(pathToFileURL(path.join(runtimeDir,"server.mjs")).href);
 const contentType={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=utf-8",".css":"text/css; charset=utf-8",".png":"image/png",".svg":"image/svg+xml",".jpg":"image/jpeg",".jpeg":"image/jpeg",".webp":"image/webp",".ico":"image/x-icon"};
-const layout=(title,body)=>'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+title+'</title></head><body>'+body+"</body></html>";
+const layout=(title,body)=>'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+title+'</title><link rel="icon" type="image/svg+xml" href="/favicon.svg?v=ripees"><link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=ripees"><link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png"></head><body>'+body+"</body></html>";
 const localBadge='<div style="position:fixed;left:10px;bottom:10px;z-index:40;background:#edf3df;border:1px solid #cedbb9;border-radius:20px;padding:6px 12px;font:10px sans-serif;color:#35512d">Local test · saved on this computer · <a href="/admin" style="color:inherit">Owner workspace ↗</a></div>';
 const signinPage=layout("RIPEES — local owner sign-in",'<main style="font:15px/1.7 system-ui,sans-serif;max-width:500px;margin:12vh auto;padding:32px;color:#20382c"><img src="/assets/ripees-logo.png" alt="RIPEES" style="width:100%;max-width:380px"><h1>Test your owner workspace.</h1><p>This local sign-in simulates the site owner on your computer. Products, website content, enquiries and chatbot settings are saved in a local database.</p><form method="post" action="/local-signin"><button style="padding:15px 22px;border:0;background:#20382c;color:#d3f36a;border-radius:7px;font:inherit;cursor:pointer">Enter local owner workspace ↗</button></form><p><a href="/website" style="color:#537932">View the website instead</a></p><p style="font-size:12px;color:#7c8870">Approved-answer mode is available. The owner can enable AI mode when a provider is configured.</p></main>');
 const adminPage=layout("RIPEES — local owner workspace",'<link rel="stylesheet" href="/local-assets/admin.css"><div id="root"></div><script type="module" src="/local-assets/admin.js"></script>');
@@ -68,7 +68,7 @@ const server=http.createServer(async(req,res)=>{
  try{
   if(!["127.0.0.1:"+port,"localhost:"+port].includes(req.headers.host||""))return send(res,403,"Local connections only.","text/plain");
   const url=new URL(req.url,origin);
-  if(url.pathname==="/favicon.ico"){res.writeHead(204);return res.end();}
+  if(url.pathname==="/favicon.ico")return staticFile(path.join(root,"public"),"favicon.ico",res);
   if(url.pathname==="/local-signin"){
    if(req.method==="POST"){if(!trustedOrigin(req))return send(res,403,"Please sign in from this local site.","text/plain");res.writeHead(303,{"Location":"/admin","Set-Cookie":cookieName+"="+sessionToken+"; HttpOnly; SameSite=Strict; Path=/","Cache-Control":"no-store"});return res.end();}
    return send(res,200,signinPage);

@@ -13,10 +13,14 @@ jobs:
           cache: npm
       - run: npm ci --include=dev --include=optional
       - run: npx tsc --noEmit
+      - run: node tests/access-owner.mjs
+      - run: node tests/worker-private-routes.mjs
+      - run: node tests/d1-local-workerd.mjs
       - run: node tests/contact-migration.mjs
       - run: node tests/legal-pages.mjs
       - run: node tests/chat-release.mjs
       - run: node tests/market-readiness.mjs
       - run: node tests/crm-server-test.mjs
       - run: npm run build
+      - run: node tests/worker-built-local.mjs
       - run: npm run lint
