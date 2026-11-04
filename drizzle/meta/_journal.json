@@ -36,6 +36,13 @@
       "when": 1793653200000,
       "tag": "0004_company_contacts",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1793772123075,
+      "tag": "0005_admin_authentication",
+      "breakpoints": true
     }
   ]
 }

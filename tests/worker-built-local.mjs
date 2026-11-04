@@ -39,7 +39,9 @@ const runtime = new Miniflare({
   d1Databases: { DB: "ripees-built-fixture" },
   bindings: {
     RIPEES_ADMIN_HOST: host, RIPEES_ACCESS_ISSUER: issuer, RIPEES_ACCESS_AUDIENCE: audience,
-    RIPEES_ADMIN_EMAIL: email, RIPEES_ENABLE_AI: "false",
+    RIPEES_ADMIN_EMAIL: email, RIPEES_ADMIN_EMAILS: email,
+    RIPEES_AUTH_PEPPER: "built-worker-test-pepper-with-at-least-32-characters",
+    RIPEES_ENABLE_AI: "false",
   },
   outboundService: request => {
     keyRequests++;
@@ -56,6 +58,12 @@ try {
     await database.batch(fs.readFileSync("drizzle/" + name, "utf8").split("--> statement-breakpoint")
       .filter(sql => sql.trim()).map(sql => database.prepare(sql)));
   }
+  assert.equal((await request("/admin/login")).status, 200);
+  const loginAttempt = await request("/api/admin-auth", {
+    method: "POST", headers: {"content-type":"application/json", origin:"https://"+host},
+    body: JSON.stringify({action:"login",email,password:"incorrect"}),
+  });
+  assert.equal(loginAttempt.status, 401);
   assert.equal((await request("/api/health")).status, 200);
   const website = await request("/website");
   assert.equal(website.status, 200);
@@ -66,6 +74,16 @@ try {
   assert.equal((await request("/api/admin", { headers: {
     "oai-authenticated-user-email": email, "oai-authenticated-user-id": "forged",
   } })).status, 403);
+  const sessionToken = "b".repeat(64);
+  const sessionHash = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(sessionToken))).toString("hex");
+  await database.prepare("INSERT INTO admin_users (id,email,password_hash,created_at,updated_at) VALUES (?,?,?,?,?)")
+    .bind("session-owner", email, "unused", new Date().toISOString(), new Date().toISOString()).run();
+  await database.prepare("INSERT INTO admin_sessions (token_hash,user_id,created_at,expires_at) VALUES (?,?,?,?)")
+    .bind(sessionHash, "session-owner", new Date().toISOString(), Date.now() + 86400000).run();
+  const session = {cookie:"ripees_admin_session="+sessionToken};
+  const sessionAuthorized = await request("/api/admin", {headers:session});
+  assert.equal(sessionAuthorized.status, 200);
+  assert.equal((await sessionAuthorized.json()).ownerName, email);
   for (const claims of [{email:"visitor@example.test"}, {exp:1}]) {
     assert.equal((await request("/api/admin", { headers: {
       "cf-access-jwt-assertion": await assertion(claims),

@@ -30,7 +30,11 @@ On portable, `npm run dev` uses `vinext dev` with HMR, starting at port 5173. Vi
 
 For managed Linux browser QA, follow the Sites skill's managed preview reference. The daemon runs the project's Vite dev script with `--host 0.0.0.0 --port 4173 --strictPort`; use the CLI's returned URL. The ignored local profile survives the daemon's cleared environment.
 
-The portable profile simulates ChatGPT sign-in only for loopback development requests. Visit `/signin-with-chatgpt?return_to=/` to sign in as `local_seedy` (`seedy@sites.test`, display name `Seedy`) and `/signout-with-chatgpt?return_to=/` to sign out. The development cookie preserves that identity across server restarts. Mock auth is disabled in the managed-linux profile and is not included in production builds; hosted authentication remains dispatch-owned.
+The portable Vite profile may simulate ChatGPT identity for unrelated Sites preview tests. That mock does not grant access to the RIPEES administrator workspace. CRM administrators use database-backed password accounts in local and hosted deployments; see [LOCAL-README.md](./LOCAL-README.md) for local setup.
+
+## Administrator authentication
+
+Set `RIPEES_ADMIN_EMAILS` to a comma-separated allowlist and configure `RIPEES_AUTH_PEPPER` as a stable, private random secret of at least 32 characters. Configure these values in the deployed Worker environment and in the operator's ignored `.env.local` or `.dev.vars` file; the remote provisioning command must use the same allowlist and pepper as the Worker. Changing the pepper invalidates setup tokens and existing recovery codes. Never reuse any secret previously pasted into chat. After applying the database migrations to D1, provision an account with `node scripts/provision-admin.mjs --remote admin@example.com --database-id <D1-database-UUID> --base-url https://your-site.example`; use the database UUID shown in Cloudflare's D1 dashboard, not the binding name. The command creates a one-use setup link that expires after 30 minutes. The admin chooses their password in the browser, and recovery codes are shown once. No email sender or new authentication API is required; remote database provisioning uses the project's existing Cloudflare D1/Wrangler access.
 
 The Worker uses `vinext/server/fetch-handler`, including Vinext's config-aware image handling. After building, `npm start` runs that Worker locally through Wrangler on `127.0.0.1`, sharing `.wrangler/state` with dev preview and local D1 migrations; it does not deploy the site or simulate sign-in. Use the URL printed by the server. Pass `npm start -- --port <port>` to select a different built-preview port.
 
@@ -50,7 +54,7 @@ Local tool usage metrics are disabled by default. Set `WRANGLER_SEND_METRICS=tru
 - the remaining `scripts/` files select execution profiles and run installation, development, and builds; the plugin's helpers orchestrate the Sites lifecycle
 - `dist/` contains generated deployment output; `.vinext/`, `.wrangler/`, and `.sites-runtime/` contain ignored local tool state
 - `db/index.ts` reads the D1 binding from the Cloudflare Worker environment
-- `db/schema.ts` starts intentionally empty
+- `db/schema.ts` declares the application and administrator-authentication schemas
 - `@cloudflare/workers-types` provides Worker types; `cloudflare-env.d.ts` declares optional `DB`/`BUCKET` bindings—update these declarations if binding names change
 - `examples/d1/` contains an optional D1 example surface
 - `drizzle.config.ts` supports local migration generation when needed

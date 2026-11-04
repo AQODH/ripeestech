@@ -37,5 +37,9 @@ for (const path of ["/admin", "/admin/", "/api/admin", "/api/leads", "/api/backu
   assert.equal(response.headers.get("Cache-Control"), "private, no-store");
   assert.equal(response.headers.get("X-Frame-Options"), "DENY");
 }
+for (const path of ["/admin/login", "/api/admin-auth"]) {
+  const response = await worker.fetch(new Request("https://ripees-staging.test" + path), env, {});
+  assert.equal(response.status, 200);
+}
 assert.equal((await worker.fetch(new Request("https://direct-origin.test/website"), env, {})).status, 200);
 console.log("PASS private paths deny alternate hosts and prevent public cache");
