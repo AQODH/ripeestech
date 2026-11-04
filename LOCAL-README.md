@@ -65,7 +65,7 @@ The local service currently runs in **knowledge mode**:
 - States when external product information is not verified.
 - Does not make external AI calls or browse the web.
 
-The local runner can load a securely configured key from ignored .env.local. AI assistance supports streamed replies and knowledge fallback. This computer currently uses approved-answer mode because the verified provider response reported billing_not_active. Activate the selected API project’s billing, then choose AI assisted in the CRM Chatbot tab and verify a live reply. Keys and private data are excluded from the source archive.
+The repository’s chatbot updates are retained: optional streamed AI replies, feedback, reviewed handover and owner insights. AI mode requires a configured provider and available billing; approved-answer mode works without it. No credentials are included in this checkout. See CHATBOT-RELEASE.md for the retained release details.
 
 ## Testing and limits
 
@@ -97,9 +97,4 @@ The assistant shows animated typing dots for at least three seconds before a suc
 
 ## Launch polish
 
-The inbox supports search, status filters, 50-row pages and complete CSV exports. Streamed JSON backups include all records. Restore limits: 10 MB, 1,000 products and 10,000 enquiries. The hero image and alternative text are editable in the Website editor. Approved phone/WhatsApp: +256 750 676139. See RIPEES-launch-readiness.md next to this source folder for release limits.
-
-
-## Chatbot release — 31 October 2026
-
-Helpful/not-helpful feedback uses per-answer receipts. Full transcripts are not stored automatically. Customers can explicitly share a question; common emails, numbers and key formats are redacted. Owner insights show seven-day usage, topic gaps, feedback and provider status. Metadata follows a 30-day retention policy and is cleaned during use; inactive deployments should schedule cleanup before public operation. Customer-reviewed summaries can open an enquiry or a WhatsApp draft without automatic sending. Prepared reply delay is configurable; generated AI replies stream immediately. API limits default to 100 generation attempts/day and 1,200 output tokens/request, plus public visitor limits; configure provider billing caps separately. New ephemeral chat metrics are not included in the customer-content backup.
+The inbox supports search, status filters, 50-row pages and complete CSV exports. Streamed JSON backups include all records. Restore limits: 10 MB, 1,000 products and 10,000 enquiries. The hero image and alternative text are editable in the Website editor. Approved phone/WhatsApp: +256 787 947343. See RIPEES-launch-readiness.md next to this source folder for release limits.

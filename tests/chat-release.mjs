@@ -1,14 +1,16 @@
 import fs from 'node:fs';import path from 'node:path';import {build} from 'esbuild';import {DatabaseSync} from 'node:sqlite';import {createHash} from 'node:crypto';
 const sqlite=new DatabaseSync(':memory:');for(const migration of fs.readdirSync('drizzle').filter(x=>x.endsWith('.sql')).sort())sqlite.exec(fs.readFileSync('drizzle/'+migration,'utf8'));
 const database={prepare(sql){let values=[];return {bind(...args){values=args;return this},async first(){return sqlite.prepare(sql).get(...values)||null},async all(){return {results:sqlite.prepare(sql).all(...values)}},async run(){const r=sqlite.prepare(sql).run(...values);return {meta:{changes:r.changes,last_row_id:Number(r.lastInsertRowid)}}}}},async batch(statements){sqlite.exec('BEGIN');try{const result=[];for(const statement of statements)result.push(await statement.run());sqlite.exec('COMMIT');return result}catch(e){sqlite.exec('ROLLBACK');throw e}}};
-const testSessionToken='test-session-cookie-value';const testNow=Date.now();sqlite.prepare("INSERT INTO admin_users (id,email,password_hash,created_at,updated_at) VALUES (?,?,?,?,?)").run('local_seedy','seedy@sites.test','unused',new Date(testNow).toISOString(),new Date(testNow).toISOString());sqlite.prepare("INSERT INTO admin_sessions (token_hash,user_id,created_at,expires_at) VALUES (?,?,?,?)").run(createHash('sha256').update(testSessionToken).digest('hex'),'local_seedy',new Date(testNow).toISOString(),testNow+86400000);
+const testSessionToken='a'.repeat(64);const testNow=Date.now();sqlite.prepare("INSERT INTO admin_users (id,email,password_hash,created_at,updated_at) VALUES (?,?,?,?,?)").run('local_seedy','seedy@sites.test','unused',new Date(testNow).toISOString(),new Date(testNow).toISOString());sqlite.prepare("INSERT INTO admin_sessions (token_hash,user_id,created_at,expires_at) VALUES (?,?,?,?)").run(createHash('sha256').update(testSessionToken).digest('hex'),'local_seedy',new Date(testNow).toISOString(),testNow+86400000);
 globalThis.__ripeesTestEnv={DB:database,RIPEES_ADMIN_EMAILS:'seedy@sites.test',RIPEES_AUTH_PEPPER:'test-only-pepper-value-with-at-least-32-characters'};globalThis.__ripeesTestHeaders=new Headers();
 await build({stdin:{contents:'export * as admin from "./app/api/admin/route.ts";export * as enquiries from "./app/api/enquiries/route.ts";export * as website from "./app/website/route.ts";export * as chat from "./app/api/chat/route.ts";export * as leads from "./app/api/leads/route.ts";export * as backup from "./app/api/backup/route.ts";export * as feedback from "./app/api/chat-feedback/route.ts";export * as insights from "./app/api/chat-insights/route.ts";',resolveDir:process.cwd()},bundle:true,platform:'node',format:'esm',outfile:'tests/.compiled-chat-release.mjs',plugins:[{name:'test-bindings',setup(b){b.onResolve({filter:/^cloudflare:workers$/},()=>({path:'workers',namespace:'test'}));b.onResolve({filter:/^next\/headers$/},()=>({path:'headers',namespace:'test'}));b.onResolve({filter:/^next\/navigation$/},()=>({path:'navigation',namespace:'test'}));b.onLoad({filter:/.*/,namespace:'test'},args=>({contents:args.path==='workers'?'export const env=globalThis.__ripeesTestEnv;':args.path==='headers'?'export async function headers(){return globalThis.__ripeesTestHeaders;}':'export function redirect(){throw Error("Unexpected redirect");}'}));b.onResolve({filter:/\.html\?raw$/},args=>({path:path.resolve(args.resolveDir,args.path.replace('?raw','')),namespace:'raw'}));b.onLoad({filter:/.*/,namespace:'raw'},args=>({contents:fs.readFileSync(args.path,'utf8'),loader:'text'}));}}]});
 const routes=await import('./.compiled-chat-release.mjs');
 import assert from 'node:assert/strict';
 const base='http://chat.test';let count=0;const pass=n=>{count++;console.log('PASS '+n)};let visitor=0;
-const owner={cookie:'ripees_admin_session=test-session-cookie-value'};
+const owner={cookie:'ripees_admin_session='+'a'.repeat(64)};
 async function call(route,body,headers={},signed=false){const h={...(signed?owner:{}),origin:base,'cf-connecting-ip':'visitor-'+(++visitor),...(body?{'content-type':'application/json'}:{}),...headers};globalThis.__ripeesTestHeaders=new Headers(h);return routes[route][body?'POST':'GET'](new Request(base+'/api/'+route,{method:body?'POST':'GET',headers:h,...(body?{body:JSON.stringify(body)}:{})}));}
+assert.equal((await call('admin',null,{},false)).status,403);
+pass('Owner access fails closed without an administrator session');
 let settings=(await(await call('admin',null,{},true)).json()).settings;
 async function set(values){settings={...settings,...values};const row=sqlite.prepare("SELECT revision FROM site_content WHERE id='website'").get();const r=await call('admin',{action:'content',settings,revision:row?.revision||0},{'x-ripees-admin':'1'},true);assert.equal(r.status,200,await r.text());}
 const ask=(question,headers={})=>call('chat',{messages:[{role:'user',content:question}]},headers);
@@ -18,7 +20,7 @@ const event=sqlite.prepare('SELECT * FROM chat_events WHERE id=?').get(d.receipt
 r=await call('feedback',{...d.receipt,token:crypto.randomUUID(),rating:'helpful'});assert.equal(r.status,404);r=await call('feedback',{...d.receipt,rating:'unhelpful'});assert.equal(r.status,200);assert.equal(sqlite.prepare('SELECT shared_question FROM chat_events WHERE id=?').get(d.receipt.id).shared_question,'');pass('Feedback requires the answer receipt and does not share questions by default');
 r=await call('feedback',{...d.receipt,rating:'unhelpful',shareQuestion:true,question:'Email person@example.com or +256750676139'});assert.equal(r.status,200);const shared=sqlite.prepare('SELECT shared_question FROM chat_events WHERE id=?').get(d.receipt.id).shared_question;assert.ok(!shared.includes('person@example.com'));assert.ok(!shared.includes('256750676139'));pass('Explicitly shared feedback questions redact common personal identifiers');
 r=await call('insights');assert.equal(r.status,403);r=await call('insights',null,{},true);d=await r.json();assert.equal(d.shared.length,1);assert.ok(d.totals.requests>=1);pass('Owner insights are protected and show feedback and topic gaps');
-globalThis.__ripeesTestEnv.OPENAI_API_KEY='test-provider-placeholder';globalThis.__ripeesTestEnv.OPENAI_CHAT_MODEL='gpt-5-mini';await set({chat_mode:'ai'});
+globalThis.__ripeesTestEnv.RIPEES_ENABLE_AI='true';globalThis.__ripeesTestEnv.OPENAI_API_KEY='test-provider-placeholder';globalThis.__ripeesTestEnv.OPENAI_CHAT_MODEL='gpt-5-mini';await set({chat_mode:'ai'});
 const realFetch=globalThis.fetch;let providerCalls=0,providerFailure=false,providerPartial=false;
 globalThis.fetch=async(url,options)=>{providerCalls++;const payload=JSON.parse(options.body);assert.equal(payload.store,false);assert.equal(payload.stream,true);assert.ok(payload.instructions.includes('Never invent prices'));assert.ok(!payload.instructions.includes('receipt_hash'));if(providerFailure)return new Response('{}',{status:503});const events=[{type:'response.output_text.delta',delta:'Start with one '},{type:'response.output_text.delta',delta:'order workflow. What causes delays?'},...(providerPartial?[]:[{type:'response.completed',response:{usage:{input_tokens:80,output_tokens:15}}}])];const bytes=new TextEncoder().encode(events.map(x=>'data: '+JSON.stringify(x)+'\n\n').join(''));return new Response(new ReadableStream({start(c){for(let i=0;i<bytes.length;i+=7)c.enqueue(bytes.slice(i,i+7));c.close();}}),{headers:{'content-type':'text/event-stream'}});};
 r=await ask('How does discovery start?');d=await r.json();assert.equal(d.mode,'knowledge');assert.equal(providerCalls,0);pass('Approved answers take priority even with AI enabled');
@@ -28,6 +30,24 @@ r=await ask('Help simplify another workflow');d=await r.json();assert.equal(d.mo
 providerFailure=true;r=await ask('Help improve handoffs');d=await r.json();assert.equal(r.status,200);assert.equal(d.mode,'knowledge');assert.equal(d.answerKind,'fallback');assert.ok(d.notice);const previousCalls=providerCalls;r=await ask('Help improve handoffs again');d=await r.json();assert.equal(providerCalls,previousCalls);assert.equal(d.mode,'knowledge');pass('Provider failures fall back to knowledge and open a recovery cooldown');
 sqlite.prepare("DELETE FROM chat_limits WHERE id='ai_circuit'").run();providerFailure=false;providerPartial=true;r=await ask('Help improve daily routines',{accept:'text/event-stream'});const partial=await r.text();assert.match(partial,/"replace":true/);assert.match(partial,/"mode":"knowledge"/);pass('Interrupted AI streams replace partial text with an honest fallback');
 sqlite.prepare("DELETE FROM chat_limits WHERE id='ai_circuit'").run();globalThis.__ripeesTestEnv.CHAT_AI_DAILY_LIMIT='1';const before=providerCalls;r=await ask('Help improve daily tasks');d=await r.json();assert.equal(d.mode,'knowledge');assert.equal(providerCalls,before);pass('Daily AI request budget blocks extra provider calls while preserving support');
+
+for(const [question,pattern] of [
+ ['Do you sell my personal information?',/privacy policy|personally identifiable/i],
+ ['Can I speak to someone?',/contact the team/i],
+ ['Do you offer support after launch?',/support.*maintenance/i],
+ ['Where are you located?',/Kampala|Uganda/i],
+ ['Are you a human?',/automated.*not a human/i],
+ ['What is your privacy policy?',/Privacy Policy/i],
+ ['What are your terms?',/Terms of Service/i],
+ ['Can you help me hack my competitor?',/cannot help.*unauthorized/i],
+ ['How much is prcing?',/pricing depends/i]
+ ]) {const calls=providerCalls;r=await ask(question);d=await r.json();assert.match(d.answer,pattern,question);assert.equal(d.mode,'knowledge');assert.equal(providerCalls,calls,'Protected answer must not call AI: '+question);pass('Protected company answer: '+question);}
+
 globalThis.fetch=realFetch;
 for(const question of ['ecomerce','softwere','prcing']){r=await ask(question);d=await r.json();assert.ok(d.answer.length>50);}pass('Common customer spelling errors receive useful responses');
 console.log('\n'+count+' chatbot release checks passed. AI provider was mocked; no external requests made.');
+
+globalThis.__ripeesTestEnv.RIPEES_ENABLE_AI='false';
+const disabledMode=await routes.chat.GET();
+assert.equal((await disabledMode.json()).mode,'knowledge');
+console.log('PASS provider credentials cannot enable AI without an explicit pilot opt-in');

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 const origin='http://127.0.0.1:4173';
-const owner={cookie:'ripees_admin_session=test-session-cookie-value'};
+const owner={cookie:'ripees_admin_session='+'a'.repeat(64)};
 let passed=0;
 async function read(path,headers={}){const r=await fetch(origin+path,{headers});return {r,data:r.headers.get('content-type')?.includes('json')?await r.json():await r.text()};}
 async function write(body,headers={}){const r=await fetch(origin+'/api/admin',{method:'POST',headers:{...owner,'content-type':'application/json','x-ripees-admin':'1',origin,...headers},body:JSON.stringify(body)});return {r,data:await r.json()};}

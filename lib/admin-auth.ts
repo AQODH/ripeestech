@@ -1,7 +1,8 @@
 import { env } from "cloudflare:workers";
 import { headers } from "next/headers";
+import { ADMIN_SESSION_COOKIE, getAdminSessionUser } from "./admin-session";
 
-const SESSION_COOKIE = "ripees_admin_session";
+const SESSION_COOKIE = ADMIN_SESSION_COOKIE;
 const SESSION_LIFETIME_MS = 12 * 60 * 60 * 1000;
 const PASSWORD_ITERATIONS = 600_000;
 const encoder = new TextEncoder();
@@ -12,11 +13,6 @@ export type AdminUser = {
   email: string;
   displayName: string;
   fullName: string | null;
-};
-
-type AdminSession = {
-  id: string;
-  email: string;
 };
 
 function database() {
@@ -356,15 +352,5 @@ export async function adminAuthPost(req: Request): Promise<Response> {
 }
 
 export async function getAdminUser(): Promise<AdminUser | null> {
-  const requestHeaders = await headers();
-  const token = cookieValue(requestHeaders, SESSION_COOKIE);
-  if (!token) return null;
-  const row = await database()
-    .prepare(
-      "SELECT admin_users.id,admin_users.email FROM admin_sessions JOIN admin_users ON admin_users.id=admin_sessions.user_id WHERE admin_sessions.token_hash=? AND admin_sessions.expires_at>? LIMIT 1",
-    )
-    .bind(await digest(token), Date.now())
-    .first<AdminSession>();
-  if (!row || !allowedEmails().has(row.email)) return null;
-  return { userId: row.id, email: row.email, displayName: row.email, fullName: null };
+  return getAdminSessionUser(await headers(), database(), env.RIPEES_ADMIN_EMAILS);
 }
