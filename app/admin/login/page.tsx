@@ -66,7 +66,7 @@ export default function AdminLoginPage() {
       if (!response.ok) throw new Error(result.error || "Authentication failed. Please retry.");
       if (mode === "login") {
         // A full navigation keeps this page independent from framework-specific router runtime.
-        window.location.assign(result.redirectTo || "/admin");
+        window.location.replace(new URL("/admin", window.location.origin).href);
       } else {
         if (result.email) setEmail(result.email);
         setRecoveryCodes(result.recoveryCodes || []);
