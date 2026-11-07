@@ -2,7 +2,7 @@
 cd /d "%~dp0"
 where node >nul 2>&1
 if errorlevel 1 (
-  echo Node.js 22.13 or later is required. Install Node.js and try again.
+  echo Node.js 24 or later is required. Install Node.js 24 LTS and try again.
   pause
   exit /b 1
 )

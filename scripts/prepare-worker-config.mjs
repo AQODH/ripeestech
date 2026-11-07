@@ -26,9 +26,13 @@ if (!hostname || (target === "staging"
   : hostname !== "ripees.com")) {
   throw new Error("Supply the intended staging Worker hostname or ripees.com for production.");
 }
-if (!issuer || !/^https:\/\/[a-z0-9-]+\.cloudflareaccess\.com$/.test(issuer) ||
-    !audience || !/^[a-f\d]{64}$/i.test(audience) || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-  throw new Error("Provide the Access issuer, application audience, and authorized owner email.");
+if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  throw new Error("Provide the authorized owner email.");
+}
+if ((target === "production" || issuer || audience) &&
+    (!issuer || !/^https:\/\/[a-z0-9-]+\.cloudflareaccess\.com$/.test(issuer) ||
+     !audience || !/^[a-f\d]{64}$/i.test(audience))) {
+  throw new Error("Provide both a valid Cloudflare Access issuer and application audience.");
 }
 
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -60,16 +64,22 @@ const config = {
     database_id: databaseId,
     migrations_dir: path.relative(directory, migrations).split(path.sep).join("/"),
   }],
+  // App files (APK and installers) offered for direct download. Create the bucket first:
+  //   wrangler r2 bucket create ripees-<target>-apps
+  r2_buckets: [{ binding: "BUCKET", bucket_name: value("APPS_BUCKET") || "ripees-" + target + "-apps" }],
   triggers: { crons: ["17 2 * * *"] },
   observability: { enabled: true, head_sampling_rate: 0.1 },
   vars: {
     RIPEES_ADMIN_HOST: hostname,
     RIPEES_ADMIN_EMAIL: email,
-    RIPEES_ACCESS_ISSUER: issuer,
-    RIPEES_ACCESS_AUDIENCE: audience,
     RIPEES_ENABLE_AI: "false",
+    APP_MAX_UPLOAD_MB: value("APP_MAX_UPLOAD_MB") || "95",
   },
 };
+if (issuer && audience) {
+  config.vars.RIPEES_ACCESS_ISSUER = issuer;
+  config.vars.RIPEES_ACCESS_AUDIENCE = audience;
+}
 const output = path.join(directory, "wrangler." + target + ".json");
 fs.writeFileSync(output, JSON.stringify(config, null, 2) + "\n");
 console.log("Prepared dist/server/wrangler." + target + ".json. No cloud resources were contacted.");

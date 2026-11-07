@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { Miniflare } from "miniflare";
@@ -14,6 +15,8 @@ const issuer = "https://ripees-fixture.cloudflareaccess.com";
 const host = "ripees-staging.test";
 const audience = "synthetic-audience";
 const email = "owner@example.test";
+const setupEmail = "setup@example.test";
+const testPepper = "built-worker-test-pepper-with-at-least-32-characters";
 const pair = await crypto.subtle.generateKey({
   name: "RSASSA-PKCS1-v1_5", modulusLength: 2048,
   publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256",
@@ -39,8 +42,8 @@ const runtime = new Miniflare({
   d1Databases: { DB: "ripees-built-fixture" },
   bindings: {
     RIPEES_ADMIN_HOST: host, RIPEES_ACCESS_ISSUER: issuer, RIPEES_ACCESS_AUDIENCE: audience,
-    RIPEES_ADMIN_EMAIL: email, RIPEES_ADMIN_EMAILS: email,
-    RIPEES_AUTH_PEPPER: "built-worker-test-pepper-with-at-least-32-characters",
+    RIPEES_ADMIN_EMAIL: email, RIPEES_ADMIN_EMAILS: email + "," + setupEmail,
+    RIPEES_AUTH_PEPPER: testPepper,
     RIPEES_ENABLE_AI: "false",
   },
   outboundService: request => {
@@ -64,6 +67,27 @@ try {
     body: JSON.stringify({action:"login",email,password:"incorrect"}),
   });
   assert.equal(loginAttempt.status, 401);
+  const setupToken = "c".repeat(64);
+  const setupTokenHash = createHmac("sha256", testPepper).update("setup:" + setupToken).digest("hex");
+  await database.prepare("INSERT INTO admin_setup_tokens (id,email,token_hash,expires_at) VALUES (?,?,?,?)")
+    .bind("worker-setup", setupEmail, setupTokenHash, Date.now() + 1800000).run();
+  const setupResponse = await request("/api/admin-auth", {
+    method: "POST", headers: {"content-type":"application/json", origin:"https://"+host},
+    body: JSON.stringify({action:"complete-setup",token:setupToken,password:"WorkerTestPassword-12345"}),
+  });
+  assert.equal(setupResponse.status, 200, await setupResponse.clone().text());
+  const passwordHash = await database.prepare("SELECT password_hash FROM admin_users WHERE email=?")
+    .bind(setupEmail).first();
+  assert.match(passwordHash.password_hash, /^pbkdf2-sha256\$100000\$/);
+  const setupLogin = await request("/api/admin-auth", {
+    method: "POST", headers: {"content-type":"application/json", origin:"https://"+host},
+    body: JSON.stringify({action:"login",email:setupEmail,password:"WorkerTestPassword-12345"}),
+  });
+  assert.equal(setupLogin.status, 200, await setupLogin.clone().text());
+  const setupCookie = setupLogin.headers.get("set-cookie").split(";")[0];
+  const passwordSession = await request("/api/admin", {headers:{cookie:setupCookie}});
+  assert.equal(passwordSession.status, 200);
+  assert.equal((await passwordSession.json()).ownerName, setupEmail);
   assert.equal((await request("/api/health")).status, 200);
   const website = await request("/website");
   assert.equal(website.status, 200);

@@ -43,6 +43,13 @@
       "when": 1793772123075,
       "tag": "0005_admin_authentication",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1793963077154,
+      "tag": "0006_app_downloads",
+      "breakpoints": true
     }
   ]
 }

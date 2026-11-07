@@ -137,7 +137,6 @@ export default function AdminLoginPage() {
             </form>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 22, fontSize: 14 }}>
               {mode === "login" ? <button type="button" onClick={() => { setMode("recovery"); setError(""); }} style={linkStyle}>Use a recovery code</button> : <button type="button" onClick={() => { setMode("login"); setError(""); }} style={linkStyle}>Back to sign in</button>}
-              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
               <a href="/website" style={{ color: "#537932" }}>View website</a>
             </div>
           </>

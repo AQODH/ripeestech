@@ -56,7 +56,7 @@ if(tabs&&app){
   const thumb=document.createElement('span');thumb.className='thumb';tabs.prepend(thumb);
   const place=()=>{const b=$('[aria-pressed=true]',tabs);if(!b)return;thumb.style.width=b.offsetWidth+'px';thumb.style.transform='translateX('+b.offsetLeft+'px)'};
   new MutationObserver(place).observe(tabs,{attributes:true,subtree:true,attributeFilter:['aria-pressed']});
-  addEventListener('resize',place);document.fonts&&document.fonts.ready.then(place);place();
+  addEventListener('resize',place);if(document.fonts)document.fonts.ready.then(place);place();
   if(typeof window.render==='function'&&!reduce){
     const base=window.render;let busy=0;
     window.render=mode=>{const ws=$('.workspace',app);

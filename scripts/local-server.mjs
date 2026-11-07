@@ -5,6 +5,7 @@ import {AsyncLocalStorage} from "node:async_hooks";
 import {fileURLToPath,pathToFileURL} from "node:url";
 import {DatabaseSync} from "node:sqlite";
 import {createRequire} from "node:module";
+import {createHash} from "node:crypto";
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
 process.chdir(root);
@@ -47,9 +48,19 @@ const database={prepare(sql){let values=[];return {
  async all(){return {results:sqlite.prepare(sql).all(...values),success:true}},
  async run(){const r=sqlite.prepare(sql).run(...values);return {success:true,meta:{changes:r.changes,last_row_id:Number(r.lastInsertRowid)}}}
 }},async batch(statements){sqlite.exec("BEGIN");try{const results=[];for(const statement of statements)results.push(await statement.run());sqlite.exec("COMMIT");return results}catch(error){sqlite.exec("ROLLBACK");throw error}}};
+// Local stand-in for the Cloudflare R2 bucket: app files are saved under .local/files.
+const filesDir=path.join(dataDir,"files");
+function filePath(key){const target=path.resolve(filesDir,...String(key).split("/"));if(!target.startsWith(filesDir+path.sep))throw Error("Invalid file key");return target;}
+function parseRange(headers,size){const value=headers?.get?.("range");const m=value&&/^bytes=(\d*)-(\d*)$/.exec(value.trim());if(!m)return null;if(m[1]===""){const suffix=Math.min(Number(m[2]),size);return {offset:size-suffix,length:suffix};}const offset=Number(m[1]);if(offset>=size)throw Error("Range not satisfiable");const end=m[2]===""?size-1:Math.min(Number(m[2]),size-1);return {offset,length:end-offset+1};}
+const localBucket={
+ async put(key,body,options={}){const bytes=Buffer.from(await new Response(body).arrayBuffer());if(options.sha256&&createHash("sha256").update(bytes).digest("hex")!==options.sha256)throw Error("SHA-256 checksum mismatch");const target=filePath(key);fs.mkdirSync(path.dirname(target),{recursive:true});fs.writeFileSync(target,bytes);return {key,size:bytes.length};},
+ async head(key){try{const stat=fs.statSync(filePath(key));return {key,size:stat.size,httpEtag:'"'+stat.mtimeMs.toString(16)+'"'};}catch{return null;}},
+ async get(key,options={}){const meta=await this.head(key);if(!meta)return null;const range=parseRange(options.range,meta.size);const bytes=fs.readFileSync(filePath(key));const slice=range?bytes.subarray(range.offset,range.offset+range.length):bytes;return {...meta,...(range?{range}:{}),body:new Response(slice).body};},
+ async delete(key){fs.rmSync(filePath(key),{force:true});}
+};
 const context=new AsyncLocalStorage();
 globalThis.__ripeesLocalContext=context;
-globalThis.__ripeesLocalEnv={DB:database,RIPEES_ADMIN_EMAILS:process.env.RIPEES_ADMIN_EMAILS,RIPEES_AUTH_PEPPER:process.env.RIPEES_AUTH_PEPPER,RIPEES_ENABLE_AI:process.env.RIPEES_ENABLE_AI,OPENAI_API_KEY:process.env.OPENAI_API_KEY,OPENAI_CHAT_MODEL:process.env.OPENAI_CHAT_MODEL,CHAT_AI_DAILY_LIMIT:process.env.CHAT_AI_DAILY_LIMIT};
+globalThis.__ripeesLocalEnv={DB:database,BUCKET:localBucket,APP_MAX_UPLOAD_MB:process.env.APP_MAX_UPLOAD_MB,RIPEES_ADMIN_EMAILS:process.env.RIPEES_ADMIN_EMAILS,RIPEES_AUTH_PEPPER:process.env.RIPEES_AUTH_PEPPER,RIPEES_ENABLE_AI:process.env.RIPEES_ENABLE_AI,OPENAI_API_KEY:process.env.OPENAI_API_KEY,OPENAI_CHAT_MODEL:process.env.OPENAI_CHAT_MODEL,CHAT_AI_DAILY_LIMIT:process.env.CHAT_AI_DAILY_LIMIT};
 const plugins=[{name:"ripees-local-bindings",setup(b){
  b.onResolve({filter:/^cloudflare:workers$/},()=>({path:"workers",namespace:"local"}));
  b.onResolve({filter:/^next\/headers$/},()=>({path:"headers",namespace:"local"}));
@@ -60,7 +71,7 @@ const plugins=[{name:"ripees-local-bindings",setup(b){
  b.onLoad({filter:/.*/,namespace:"raw"},args=>({contents:fs.readFileSync(args.path,"utf8"),loader:"text"}));
 }}];
 console.log("Preparing RIPEES website, CRM and chatbot…");
-await build({stdin:{contents:'export * as admin from "./app/api/admin/route.ts";export * as adminAuth from "./app/api/admin-auth/route.ts";export * as enquiries from "./app/api/enquiries/route.ts";export * as website from "./app/website/route.ts";export * as chat from "./app/api/chat/route.ts";export * as leads from "./app/api/leads/route.ts";export * as backup from "./app/api/backup/route.ts";export * as feedback from "./app/api/chat-feedback/route.ts";export * as insights from "./app/api/chat-insights/route.ts";export * as terms from "./app/terms/route.ts";export * as privacy from "./app/privacy/route.ts";',resolveDir:root},bundle:true,nodePaths,platform:"node",format:"esm",outfile:path.join(runtimeDir,"server.mjs"),plugins,logLevel:"warning"});
+await build({stdin:{contents:'export * as admin from "./app/api/admin/route.ts";export * as adminAuth from "./app/api/admin-auth/route.ts";export * as enquiries from "./app/api/enquiries/route.ts";export * as website from "./app/website/route.ts";export * as chat from "./app/api/chat/route.ts";export * as leads from "./app/api/leads/route.ts";export * as backup from "./app/api/backup/route.ts";export * as feedback from "./app/api/chat-feedback/route.ts";export * as insights from "./app/api/chat-insights/route.ts";export * as terms from "./app/terms/route.ts";export * as privacy from "./app/privacy/route.ts";export * as download from "./app/api/download/route.ts";export * as upload from "./app/api/admin/upload/route.ts";',resolveDir:root},bundle:true,nodePaths,platform:"node",format:"esm",outfile:path.join(runtimeDir,"server.mjs"),plugins,logLevel:"warning"});
 await build({stdin:{contents:'import {createRoot} from "react-dom/client";import Workspace from "./app/admin/workspace";createRoot(document.getElementById("root")).render(<Workspace/>);',resolveDir:root,loader:"tsx"},bundle:true,nodePaths,platform:"browser",format:"esm",jsx:"automatic",define:{"process.env.NODE_ENV":JSON.stringify("development")},outfile:path.join(runtimeDir,"admin.js"),logLevel:"warning"});
 await build({stdin:{contents:'import {createRoot} from "react-dom/client";import Login from "./app/admin/login/page";createRoot(document.getElementById("root")).render(<Login/>);',resolveDir:root,loader:"tsx"},bundle:true,nodePaths,platform:"browser",format:"esm",jsx:"automatic",define:{"process.env.NODE_ENV":JSON.stringify("development")},outfile:path.join(runtimeDir,"admin-login.js"),logLevel:"warning"});
 const routes=await import(pathToFileURL(path.join(runtimeDir,"server.mjs")).href);
@@ -85,13 +96,15 @@ const server=http.createServer(async(req,res)=>{
   if(url.pathname.startsWith("/local-assets/"))return staticFile(runtimeDir,url.pathname.slice("/local-assets/".length),res);
   if(url.pathname.startsWith("/assets/")||["/style.css","/app.js","/chat.css","/chat.js","/favicon.svg","/motion.css","/motion.js","/theme-effects.js"].includes(url.pathname))return staticFile(path.join(root,"public"),url.pathname.slice(1),res);
   const headers=new Headers();for(const[k,v]of Object.entries(req.headers)){if(v!==undefined)headers.set(k,Array.isArray(v)?v.join(","):v);}
-  let bytes=0;const chunks=[];for await(const chunk of req){bytes+=chunk.length;if(bytes>10100000)return send(res,413,"Request is too large.","text/plain");chunks.push(chunk);}
+  const maxBody=url.pathname==="/api/admin/upload"?525000000:10100000;let bytes=0;const chunks=[];for await(const chunk of req){bytes+=chunk.length;if(bytes>maxBody)return send(res,413,"Request is too large.","text/plain");chunks.push(chunk);}
   const method=req.method||"GET";const request=new Request(new URL(req.url,"http://"+req.headers.host),{method,headers,...(["GET","HEAD"].includes(method)?{}:{body:Buffer.concat(chunks)})});
   await context.run({headers},async()=>{
    let response;
    if((url.pathname==="/terms"||url.pathname==="/privacy")&&method==="GET")return sendWebResponse(routes[url.pathname.slice(1)].GET(),res);
    if(url.pathname==="/website"&&method==="GET"){response=await routes.website.GET(request);if(response.ok){const body=(await response.text()).replace("</body>",localBadge+"</body>");response=new Response(body,{headers:response.headers});}}
    else if(url.pathname==="/api/admin"){response=method==="GET"?await routes.admin.GET():method==="POST"?await routes.admin.POST(request):new Response("Method not allowed",{status:405});if(method==="GET"&&response.ok){const data=await response.json();response=Response.json({...data,storageMode:"local"},{headers:response.headers});}}
+   else if(url.pathname==="/api/download"&&(method==="GET"||method==="HEAD"))response=await routes.download[method](request);
+   else if(url.pathname==="/api/admin/upload")response=method==="POST"?await routes.upload.POST(request):method==="DELETE"?await routes.upload.DELETE(request):new Response("Method not allowed",{status:405});
    else if(url.pathname==="/api/admin-auth")response=method==="POST"?await routes.adminAuth.POST(request):new Response("Method not allowed",{status:405});
    else if(url.pathname==="/api/chat-feedback"&&method==="POST")response=await routes.feedback.POST(request);
    else if(url.pathname==="/api/chat-insights"&&method==="GET")response=await routes.insights.GET();

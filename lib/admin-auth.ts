@@ -4,9 +4,9 @@ import { ADMIN_SESSION_COOKIE, getAdminSessionUser } from "./admin-session";
 
 const SESSION_COOKIE = ADMIN_SESSION_COOKIE;
 const SESSION_LIFETIME_MS = 12 * 60 * 60 * 1000;
-const PASSWORD_ITERATIONS = 600_000;
+const PASSWORD_ITERATIONS = 100_000; // Cloudflare Workers Web Crypto rejects higher PBKDF2 counts.
 const encoder = new TextEncoder();
-const DUMMY_PASSWORD_HASH = `pbkdf2-sha256$600000$${"0".repeat(32)}$${"0".repeat(64)}`;
+const DUMMY_PASSWORD_HASH = `pbkdf2-sha256$${PASSWORD_ITERATIONS}$${"0".repeat(32)}$${"0".repeat(64)}`;
 
 export type AdminUser = {
   userId: string;

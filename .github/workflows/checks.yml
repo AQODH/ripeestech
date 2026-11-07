@@ -23,4 +23,5 @@ jobs:
       - run: node tests/crm-server-test.mjs
       - run: npm run build
       - run: node tests/worker-built-local.mjs
+      - run: node tests/app-downloads.mjs
       - run: npm run lint

@@ -4,7 +4,7 @@ A clean full-stack starter running on [vinext](https://github.com/cloudflare/vin
 
 ## Prerequisites
 
-- Node.js `>=22.13.0`
+- Node.js `>=24.0.0` (npm 11). The lockfile is written by npm 11; `npm ci` on Node 22 (npm 10) fails with "Missing: @cloudflare/workers-types".
 - Portable: Windows, macOS, or Linux; no Bash required
 - Managed Linux: managed Linux runtime with Bash, `flock`, `curl`, `sha256sum`, and GNU `timeout`
 - Git and `tar` (including Windows `tar.exe`) are required for publishing; portable publication does not require Bash
@@ -58,6 +58,19 @@ Local tool usage metrics are disabled by default. Set `WRANGLER_SEND_METRICS=tru
 - `@cloudflare/workers-types` provides Worker types; `cloudflare-env.d.ts` declares optional `DB`/`BUCKET` bindings—update these declarations if binding names change
 - `examples/d1/` contains an optional D1 example surface
 - `drizzle.config.ts` supports local migration generation when needed
+
+## App downloads (APK and installers)
+
+Owners can attach an app file to any product in **Products → Edit product → App download**. When the product is **Available**, the website shows a "Download for Android ↓" (or Windows/macOS/Linux) button with the version, size and SHA-256 checksum, so visitors can install without Play Store or App Store.
+
+- Files are stored in Cloudflare R2 through the `BUCKET` binding (`.openai/hosting.json` sets `"r2": "BUCKET"`; `scripts/prepare-worker-config.mjs` adds `ripees-<target>-apps`). Create the bucket once with `wrangler r2 bucket create ripees-production-apps` (or set `RIPEES_PROD_APPS_BUCKET`).
+- Allowed types: `.apk .ipa .exe .msi .dmg .AppImage .deb .zip`. Default limit 95 MB (`APP_MAX_UPLOAD_MB`); Workers on Free/Pro plans accept request bodies up to 100 MB.
+- The browser computes SHA-256 before upload and R2 rejects the write if any byte changes in transit.
+- `GET /api/download?app=<product-id>` is public, supports resumable `Range` downloads and counts fresh downloads. `POST`/`DELETE /api/admin/upload?id=<product-id>` is owner-only (same protection as the rest of `/api/admin`).
+- Replacing or removing a file, or deleting the product, deletes the stored object. JSON backups include the file details but not the files themselves; R2 keeps the files.
+- `npm run local` stores files under `.local/files/` instead of R2.
+- Apply migration `drizzle/0006_app_downloads.sql` before deploying this version.
+- iPhone apps (`.ipa`) cannot be installed by the public from a website; use TestFlight, the App Store, or a Progressive Web App for iOS users.
 
 ## Workspace Auth Headers
 

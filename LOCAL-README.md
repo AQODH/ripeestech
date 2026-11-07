@@ -29,7 +29,7 @@ Or, in a terminal opened in this folder:
 
     npm run local
 
-If you move the source to another computer, install Node.js 22.13 or later (Node.js 24 is recommended), then run:
+If you move the source to another computer, install Node.js 24 or later (Node.js 22 uses npm 10, which rejects this lockfile), then run:
 
     npm run install:ci
     npm run local

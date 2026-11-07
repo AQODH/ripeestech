@@ -2,21 +2,21 @@
 
 ## Owner authentication
 
-The Worker requires a signed Cloudflare Access assertion for /admin and the admin, leads, backup and chat-insights APIs. It also requires the exact configured owner hostname. The issuer, application audience, expiry, application token type and owner email are checked with the team's RS256 signing keys. Private responses use private, no-store. The loopback simulator is a separate development entry point.
+The Worker restricts private routes to the exact configured owner hostname and accepts either an allowlisted, database-backed administrator session or a verified Cloudflare Access identity. Access assertions are checked for issuer, application audience, expiry, application token type and owner email. Private responses use private, no-store. The loopback simulator is a separate development entry point.
 
-Configure one Access application and an explicit allow policy for the owner. Verify the application audience and token on the intended hostname. For staging, use the supported Access protection on the staging workers.dev URL. For production, protect all five private path families under the same audience. Keep public site, enquiry and knowledge-chat routes available. Test denied alternate origins, anonymous access, another identity, forged and expired assertions, sign-out and valid owner access.
+Configure one Access application and an explicit allow policy for the owner. Verify the application audience and token on the intended hostname. Access protection for a workers.dev Worker covers the Worker URL, including its public routes. Keep it disabled for the public staging workers.dev site; the admin workspace is instead protected by its database-backed password session. For production, configure Access on the intended owner hostname and protect the private path families under the same audience. Keep public site, enquiry and knowledge-chat routes available. Test denied alternate origins, anonymous access, another identity, forged and expired assertions, sign-out and valid owner access.
 
 ## Isolated staging
 
 Use an independent Worker and D1 database, synthetic records, separate account configuration and the non-production hostname. Staging has no production credentials or data. The production profile disables workers.dev and version preview URLs. Both profiles keep AI disabled.
 
-After authorization, provision the staging Worker, Access application and D1 database. Supply the issued values through the five environment variables below, and set RIPEES_PROD_DATABASE_ID as well if a production database already exists so the generator can reject reuse.
+After authorization, provision the staging Worker and D1 database. For the public workers.dev staging site, do not enable Workers.dev Access protection or create a Zero Trust application for that hostname. The Worker still requires an administrator password session for private routes. Set RIPEES_PROD_DATABASE_ID as well if a production database already exists so the generator can reject reuse.
 
 - RIPEES_STAGE_DATABASE_ID
 - RIPEES_STAGE_HOST, in the form ripees-staging.<account-subdomain>.workers.dev
-- RIPEES_STAGE_ACCESS_ISSUER, in the form https://<team>.cloudflareaccess.com
-- RIPEES_STAGE_ACCESS_AUDIENCE
 - RIPEES_STAGE_ADMIN_EMAIL
+
+The staging config generator accepts optional Access settings only as a pair: RIPEES_STAGE_ACCESS_ISSUER and RIPEES_STAGE_ACCESS_AUDIENCE. Do not set either for public workers.dev staging, and do not use placeholder values. The production config continues to require both.
 
 From the checkout root on Node 24:
 
