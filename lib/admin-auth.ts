@@ -28,8 +28,9 @@ function pepper(): string {
 }
 
 function allowedEmails(): Set<string> {
+  const allowlist = [env.RIPEES_ADMIN_EMAILS, env.RIPEES_ADMIN_EMAIL].filter(Boolean).join(",");
   return new Set(
-    (env.RIPEES_ADMIN_EMAILS ?? "")
+    allowlist
       .split(",")
       .map((email) => email.trim().toLowerCase())
       .filter(Boolean),
@@ -352,5 +353,6 @@ export async function adminAuthPost(req: Request): Promise<Response> {
 }
 
 export async function getAdminUser(): Promise<AdminUser | null> {
-  return getAdminSessionUser(await headers(), database(), env.RIPEES_ADMIN_EMAILS);
+  const allowlist = [env.RIPEES_ADMIN_EMAILS, env.RIPEES_ADMIN_EMAIL].filter(Boolean).join(",");
+  return getAdminSessionUser(await headers(), database(), allowlist);
 }
