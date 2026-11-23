@@ -7,3 +7,10 @@ enquiryForm.addEventListener('submit',async e=>{e.preventDefault();const form=e.
 document.addEventListener("ripees:enquiry",event=>{const summary=typeof event.detail?.summary==="string"?event.detail.summary.slice(0,5000):"";openBrief("Business technology consultation");if(summary){enquiryForm.querySelector("[name=message]").value=summary;delete enquiryForm.dataset.requestKey;}});
 
 document.querySelector('.engine-motion')?.addEventListener('click',event=>{const button=event.currentTarget;const paused=button.closest('.hero-engine').classList.toggle('is-paused');button.setAttribute('aria-pressed',String(paused));button.setAttribute('aria-label',paused?'Play illustration animation':'Pause illustration animation');button.textContent=paused?'▶':'Ⅱ';});
+
+document.querySelector('.back-to-top')?.addEventListener('click',e=>{e.preventDefault();window.scrollTo({top:0,behavior:'smooth'});});
+
+function initKampalaClock(){const clockEl=document.querySelector('#kampala-clock');if(!clockEl)return;const update=()=>{try{const timeStr=new Intl.DateTimeFormat([],{timeZone:'Africa/Kampala',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date());clockEl.textContent=timeStr+' EAT';}catch{clockEl.textContent='UTC+3';}};update();setInterval(update,60000);}initKampalaClock();
+
+async function checkSystemHealth(){const statusEl=document.querySelector('#footer-status-text');if(!statusEl)return;try{const res=await fetch('/api/health');if(res.ok)statusEl.textContent='Edge Operational';}catch{}}checkSystemHealth();
+
