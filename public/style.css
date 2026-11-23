@@ -33,7 +33,7 @@ html[data-theme="dark"] nav a{color:#c3cdbf;transition:color .2s}
 html[data-theme="dark"] nav a:hover,html[data-theme="dark"] footer a:hover{color:var(--lime)}
 html[data-theme="dark"] button{background:var(--lime);color:#10150d;font-weight:700;box-shadow:0 0 0 1px #b9ed5522}
 html[data-theme="dark"] button:hover{background:#d1ff75;color:#10150d;box-shadow:0 8px 28px #a9df4930}
-html[data-theme="dark"] header .logo img,html[data-theme="dark"] header .brand-lockup,html[data-theme="dark"] footer .brand-lockup{filter:brightness(2.7) saturate(.9)}
+html[data-theme="dark"] header .logo img,html[data-theme="dark"] header .brand-lockup,html[data-theme="dark"] footer .brand-lockup{filter:drop-shadow(0 2px 12px rgba(0, 192, 255, 0.45))}
 html[data-theme="dark"] .hero{position:relative}
 html[data-theme="dark"] .hero:before{content:"";position:absolute;z-index:-1;width:34rem;height:34rem;right:-13rem;top:1rem;border-radius:50%;background:#83ca3620;filter:blur(95px);pointer-events:none}
 html[data-theme="dark"] .hero h1{color:#f1f4ec}
@@ -131,7 +131,7 @@ html[data-theme="dark"] header.is-floating{background:rgba(9,14,10,.86);border-c
 html[data-theme="dark"] header.is-floating .theme-toggle{background:transparent;color:#edf2e8;border-color:#526451}
 html[data-theme="dark"] header.is-floating .theme-toggle:hover{background:#b9ed55;color:#10150d}
 html[data-theme="dark"] header.is-floating>button:not(.theme-toggle){background:var(--lime);color:#10150d}
-html[data-theme="dark"] header.is-floating .brand-lockup{filter:brightness(2.7) saturate(.9)}
+html[data-theme="dark"] header.is-floating .brand-lockup{filter:drop-shadow(0 2px 12px rgba(0, 192, 255, 0.45))}
 html[data-theme="dark"] .services.cols article::before{background:radial-gradient(90% 60% at 50% 105%,#b9ed5559,transparent 70%),#172219;box-shadow:0 0 0 1px #50604a,0 30px 60px -28px #0009}
 html[data-theme="dark"] .fold-btn{color:#edf2e8!important;border-color:#526451!important}
 html[data-theme="dark"] .fold-btn:hover{border-color:#b9ed55!important}
@@ -142,11 +142,11 @@ html[data-theme="dark"] .services h3 br{display:block}
 
 /* Prevent the decorative glow from creating sideways page scroll. */
 body{overflow-x:clip}
-html[data-theme="dark"] header .brand-lockup,html[data-theme="dark"] footer .brand-lockup,html[data-theme="dark"] .core svg{filter:brightness(0) invert(1)}
+html[data-theme="dark"] header .brand-lockup,html[data-theme="dark"] footer .brand-lockup,html[data-theme="dark"] .core svg{filter:drop-shadow(0 2px 14px rgba(0, 192, 255, 0.45))}
 
 html{overflow-x:clip}
 html[data-theme="dark"] .hero:before{right:0}
-html[data-theme="dark"] header.is-floating .brand-lockup{filter:brightness(0) invert(1)}
+html[data-theme="dark"] header.is-floating .brand-lockup{filter:drop-shadow(0 2px 14px rgba(0, 192, 255, 0.45))}
 @media(max-width:950px) and (min-width:651px){
   body>header{flex-wrap:wrap;gap:10px 16px;padding:18px 5%}
   body>header .logo{margin-right:auto}
@@ -656,4 +656,140 @@ html[data-theme="dark"] .site-footer .back-to-top {
 }
 html[data-theme="dark"] .site-footer .back-to-top:hover {
   color: var(--lime);
+}
+
+/* ==========================================================================
+   RIPEES BRAND ENHANCEMENTS: TECH LEADER DESIGN SYSTEM & METRICS STRIP
+   ========================================================================== */
+:root {
+  --brand-blue: #0072f5;
+  --brand-cyan: #00c2ff;
+  --brand-gradient: linear-gradient(135deg, #00c2ff 0%, #0072f5 100%);
+}
+
+.brand-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+.brand-title {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  letter-spacing: -0.8px;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.brand-sub {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #fff;
+  background: var(--brand-gradient);
+  padding: 3px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+html[data-theme="dark"] .brand-title {
+  color: #f8fafc;
+}
+
+/* Hero Metrics & Scale Strip */
+.hero-metrics-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.metric-item strong {
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(20px, 2.2vw, 28px);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.metric-item span {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Cloud Architecture Trust Bar */
+.tech-stack-bar {
+  max-width: 1440px;
+  margin: 10px auto 30px;
+  padding: 24px 7%;
+  border-bottom: 1px solid var(--line);
+}
+.tech-stack-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+.tech-stack-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 22px;
+  align-items: center;
+}
+.tech-stack-items span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  background: rgba(0, 114, 245, 0.04);
+  border: 1px solid rgba(0, 114, 245, 0.12);
+  padding: 8px 14px;
+  border-radius: 20px;
+  transition: all 0.2s ease;
+}
+.tech-stack-items span:hover {
+  background: rgba(0, 114, 245, 0.08);
+  border-color: var(--brand-blue);
+  transform: translateY(-1px);
+}
+.tech-icon {
+  font-style: normal;
+  font-size: 13px;
+}
+
+html[data-theme="dark"] .tech-stack-items span {
+  background: rgba(0, 194, 255, 0.06);
+  border-color: rgba(0, 194, 255, 0.18);
+  color: #e2e8f0;
+}
+html[data-theme="dark"] .tech-stack-items span:hover {
+  border-color: var(--brand-cyan);
+  background: rgba(0, 194, 255, 0.12);
+}
+
+@media(max-width: 800px) {
+  .hero-metrics-strip {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+@media(max-width: 480px) {
+  .hero-metrics-strip {
+    grid-template-columns: 1fr 1fr;
+  }
 }
