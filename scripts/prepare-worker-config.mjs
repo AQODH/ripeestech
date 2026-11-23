@@ -56,6 +56,7 @@ if (!built.main || !fs.existsSync(path.resolve(directory, built.main)) || !built
 
 const config = {
   name: "ripees-" + target,
+  account_id: value("ACCOUNT_ID") || "892563ff5d2083db84ab22524490dcdf",
   main: built.main,
   compatibility_date: built.compatibility_date,
   compatibility_flags: built.compatibility_flags,
