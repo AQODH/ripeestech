@@ -71,7 +71,7 @@ const plugins=[{name:"ripees-local-bindings",setup(b){
  b.onLoad({filter:/.*/,namespace:"raw"},args=>({contents:fs.readFileSync(args.path,"utf8"),loader:"text"}));
 }}];
 console.log("Preparing RIPEES website, CRM and chatbot…");
-await build({stdin:{contents:'export * as admin from "./app/api/admin/route.ts";export * as adminAuth from "./app/api/admin-auth/route.ts";export * as enquiries from "./app/api/enquiries/route.ts";export * as website from "./app/website/route.ts";export * as chat from "./app/api/chat/route.ts";export * as leads from "./app/api/leads/route.ts";export * as backup from "./app/api/backup/route.ts";export * as feedback from "./app/api/chat-feedback/route.ts";export * as insights from "./app/api/chat-insights/route.ts";export * as terms from "./app/terms/route.ts";export * as privacy from "./app/privacy/route.ts";export * as download from "./app/api/download/route.ts";export * as upload from "./app/api/admin/upload/route.ts";',resolveDir:root},bundle:true,nodePaths,platform:"node",format:"esm",outfile:path.join(runtimeDir,"server.mjs"),plugins,logLevel:"warning"});
+await build({stdin:{contents:'export * as admin from "./app/api/admin/route.ts";export * as adminAuth from "./app/api/admin-auth/route.ts";export * as enquiries from "./app/api/enquiries/route.ts";export * as website from "./app/website/route.ts";export * as chat from "./app/api/chat/route.ts";export * as leads from "./app/api/leads/route.ts";export * as backup from "./app/api/backup/route.ts";export * as feedback from "./app/api/chat-feedback/route.ts";export * as insights from "./app/api/chat-insights/route.ts";export * as terms from "./app/terms/route.ts";export * as privacy from "./app/privacy/route.ts";export * as download from "./app/api/download/route.ts";export * as upload from "./app/api/admin/upload/route.ts";export * as subscribe from "./app/api/subscribe/route.ts";export * as subscribers from "./app/api/subscribers/route.ts";export * as unsubscribe from "./app/api/unsubscribe/route.ts";',resolveDir:root},bundle:true,nodePaths,platform:"node",format:"esm",outfile:path.join(runtimeDir,"server.mjs"),plugins,logLevel:"warning"});
 await build({stdin:{contents:'import {createRoot} from "react-dom/client";import Workspace from "./app/admin/workspace";createRoot(document.getElementById("root")).render(<Workspace/>);',resolveDir:root,loader:"tsx"},bundle:true,nodePaths,platform:"browser",format:"esm",jsx:"automatic",define:{"process.env.NODE_ENV":JSON.stringify("development")},outfile:path.join(runtimeDir,"admin.js"),logLevel:"warning"});
 await build({stdin:{contents:'import {createRoot} from "react-dom/client";import Login from "./app/admin/login/page";createRoot(document.getElementById("root")).render(<Login/>);',resolveDir:root,loader:"tsx"},bundle:true,nodePaths,platform:"browser",format:"esm",jsx:"automatic",define:{"process.env.NODE_ENV":JSON.stringify("development")},outfile:path.join(runtimeDir,"admin-login.js"),logLevel:"warning"});
 const routes=await import(pathToFileURL(path.join(runtimeDir,"server.mjs")).href);
@@ -88,13 +88,13 @@ const server=http.createServer(async(req,res)=>{
   if(!["127.0.0.1:"+port,"localhost:"+port].includes(req.headers.host||""))return send(res,403,"Local connections only.","text/plain");
   const url=new URL(req.url,origin);
   if(url.pathname==="/favicon.ico")return staticFile(path.join(root,"public"),"favicon.ico",res);
-  if(url.pathname==="/"){res.writeHead(302,{Location:"/website"});return res.end();}
+  if(url.pathname==="/"){url.pathname="/website";}
   if(url.pathname==="/admin/login")return send(res,200,adminLoginPage);
   if(url.pathname==="/admin"){
    return send(res,200,adminPage);
   }
   if(url.pathname.startsWith("/local-assets/"))return staticFile(runtimeDir,url.pathname.slice("/local-assets/".length),res);
-  if(url.pathname.startsWith("/assets/")||["/style.css","/app.js","/chat.css","/chat.js","/favicon.svg","/motion.css","/motion.js","/theme-effects.js"].includes(url.pathname))return staticFile(path.join(root,"public"),url.pathname.slice(1),res);
+  if(url.pathname.startsWith("/assets/")||url.pathname.startsWith("/vendor/")||["/style.css","/app.js","/site.js","/consent.js","/chat.css","/chat.js","/favicon.svg"].includes(url.pathname))return staticFile(path.join(root,"public"),url.pathname.slice(1),res);
   const headers=new Headers();for(const[k,v]of Object.entries(req.headers)){if(v!==undefined)headers.set(k,Array.isArray(v)?v.join(","):v);}
   const maxBody=url.pathname==="/api/admin/upload"?525000000:10100000;let bytes=0;const chunks=[];for await(const chunk of req){bytes+=chunk.length;if(bytes>maxBody)return send(res,413,"Request is too large.","text/plain");chunks.push(chunk);}
   const method=req.method||"GET";const request=new Request(new URL(req.url,"http://"+req.headers.host),{method,headers,...(["GET","HEAD"].includes(method)?{}:{body:Buffer.concat(chunks)})});
@@ -110,6 +110,9 @@ const server=http.createServer(async(req,res)=>{
    else if(url.pathname==="/api/chat-insights"&&method==="GET")response=await routes.insights.GET();
    else if(url.pathname==="/api/backup"&&method==="GET")response=await routes.backup.GET();
    else if(url.pathname==="/api/leads"&&method==="GET")response=await routes.leads.GET(request);
+   else if(url.pathname==="/api/subscribe"&&method==="POST")response=await routes.subscribe.POST(request);
+   else if(url.pathname==="/api/subscribers"&&method==="GET")response=await routes.subscribers.GET();
+   else if(url.pathname==="/api/unsubscribe"&&method==="GET")response=await routes.unsubscribe.GET(request);
    else if(url.pathname==="/api/enquiries"&&method==="POST")response=await routes.enquiries.POST(request);
    else if(url.pathname==="/api/chat")response=method==="GET"?await routes.chat.GET():method==="POST"?await routes.chat.POST(request):new Response("Method not allowed",{status:405});
    else response=new Response("Not found",{status:404});
