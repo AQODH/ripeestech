@@ -76,7 +76,7 @@ export default function AdminAuthControls({ ownerName = "RIPEES administrator", 
         <div id="profile-panel" className="profile-panel" role="region" aria-label="Your account">
           <div className="profile-identity">
             <span className="profile-avatar profile-avatar-large" aria-hidden="true">{initials}</span>
-            <div><strong>{name}</strong><span>RIPEES Technologies</span><small><ShieldCheck size={12} aria-hidden="true" /> Administrator access</small></div>
+            <div><strong>{name}</strong><span>RIPEES</span><small><ShieldCheck size={12} aria-hidden="true" /> Administrator access</small></div>
           </div>
           <div className="profile-actions">
             <button type="button" className="profile-action" onClick={() => select(onSettings)}><Settings size={17} aria-hidden="true" /><span>Workspace settings</span></button>
