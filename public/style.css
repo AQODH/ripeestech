@@ -306,6 +306,13 @@ dialog input,dialog select,dialog textarea{display:block;width:100%;margin-top:7
 dialog input:focus,dialog select:focus,dialog textarea:focus{border-color:#0b327a;box-shadow:0 0 0 4px rgba(11,50,122,.18);outline:none}
 dialog .note{font-size:13px;line-height:1.6;margin-top:18px}
 dialog button[type=submit]{width:100%;margin-top:20px;padding:18px;background:var(--ink);color:var(--paper);box-shadow:none}
+#brief small{margin-top:0}
+#brief h2{margin:8px 0 8px;font-size:clamp(26px,3.2vw,36px)}
+#brief label{margin-top:11px;font-size:13.5px}
+#brief input,#brief select,#brief textarea{margin-top:5px;padding:11px 14px}
+#brief textarea{min-height:84px}
+#brief .note{margin-top:12px;font-size:12.5px}
+#brief button[type=submit]{position:sticky;bottom:0;z-index:5;margin-top:16px;padding:16px;background:var(--ink);color:var(--paper);box-shadow:0 -12px 20px var(--paper)}
 dialog button[type=submit]:hover{background:var(--forest)}
 dialog button[type=submit]:disabled{opacity:.6;cursor:progress;transform:none}
 dialog .close{position:absolute;top:14px;right:14px;width:40px;height:40px;border-radius:50%;font-size:26px;line-height:1;display:grid;place-items:center;color:var(--ink);transition:background .2s}
